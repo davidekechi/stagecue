@@ -1,0 +1,54 @@
+# StageCue — Implementation Plan
+
+StageCue is a real-time presentation timer and remote messaging application. It has a **desktop Display** (the laptop that drives the TV over HDMI) and a **mobile Controller** (the operator's phone). It is built as a Laravel modular monolith with a Vue 3 + TypeScript PWA front end, and it is hosted on **Laravel Cloud**.
+
+> **Founding principle:** the desktop presentation must always stay reliable, even when everything else disconnects. The phone is a remote control. The backend is a relay. Neither one is needed for a presentation that is already running.
+
+## Document set
+
+| # | Document | Contents |
+|---|---|---|
+| 1 | [01-PRD.md](01-PRD.md) | Product requirements (consolidated brief + addendum), user flows, MVP vs post-MVP feature matrix |
+| 2 | [02-HLD.md](02-HLD.md) | High-level design: system, application, front end, back end, communication, engines, offline-first, sync, security, deployment, tech choices, dependencies, risks |
+| 3 | [03-LLD.md](03-LLD.md) | Low-level design: database/ERD, front-end modules & components, back-end modules, algorithms (pseudocode), offline & sync implementation |
+| 4 | [04-API-and-Events.md](04-API-and-Events.md) | REST API spec, WebSocket channel & event spec, command catalogue, error codes |
+| 5 | [05-Test-Plan.md](05-Test-Plan.md) | Unit, integration, component, WebSocket, offline, E2E, compatibility and real-world tests |
+| 6 | [06-Deployment.md](06-Deployment.md) | Local/staging/production on Laravel Cloud, env vars, Reverb, DB, HTTPS without a custom domain, monitoring, backups, release & rollback |
+| 7 | [07-Backlog.md](07-Backlog.md) | Ordered milestones and agent-sized tasks with acceptance criteria |
+
+## Binding decisions (summary)
+
+These decisions are fixed. An implementation agent must not change them without a recorded decision update in this file.
+
+| ID | Decision |
+|---|---|
+| D1 | **One Laravel app** (modular monolith) serves the API, the broadcasting auth and the SPA shell. There are no microservices. |
+| D2 | **Vue 3 SPA + TypeScript** (no Inertia). It uses client-side routing so that the app shell works offline from the service worker. |
+| D3 | **Pure, framework-free core** (`resources/js/core/`): the timer engine, message engine and presentation reducer are pure TypeScript functions with an injected clock. Vue, Laravel and WebSockets are adapters around this core. |
+| D4 | **The Display is authoritative.** Controllers send *intent commands* (e.g. `TIMER_PAUSE`) and never send full state. The Display validates each command, applies it, persists the result and publishes a snapshot. |
+| D5 | **Commands go through HTTP, state comes back over WebSocket.** Controller → `POST /api/sessions/{id}/commands` → Laravel validates, authorises, rate-limits and de-duplicates the command → `ShouldBroadcastNow` sends it to the Display's private channel. The Display sends its ack and snapshot with `POST .../snapshots`, which is broadcast to the controllers' channel. |
+| D6 | **Heartbeats use Reverb client events (whispers)** on a presence channel: every 3 s, disconnected after 9 s. Spike task T0.3 must confirm that Laravel Cloud WebSockets accepts client events. If it does not, use the HTTP heartbeat fallback defined in the LLD (§6.4). |
+| D7 | **Timer truth is an absolute end timestamp**, plus a monotonic-clock anchor within a session. It is never a decrementing counter. Wall-clock / monotonic reconciliation follows LLD §5.2. |
+| D8 | **Display mode (blackout) is orthogonal** to the timer and message state. Render priority: `blackout` > `message` > `timer`. |
+| D9 | **IndexedDB is the durable store** (via `idb`). It is written through on every applied command and on every engine transition. It is not written on every tick. |
+| D10 | **Every command has an idempotency key.** Each command carries a UUIDv7 `commandId` (de-duplicated on both server and Display), a server-assigned `seq`, and a `baseRevision`. Commands written while offline are saved as **pending drafts** and never replayed automatically. |
+| D11 | **Pairing:** a one-time 6-character code or a QR token (10-minute expiry) is exchanged for a Sanctum token for the `Device`. The MVP allows **one active controller per session**. A new pairing replaces the old one, and the Display can revoke it. |
+| D12 | **Hosting:** Laravel Cloud app, Laravel Cloud managed WebSockets (Reverb), and Laravel Serverless Postgres. The app uses the free `*.laravel.cloud` hostname, which comes with automatic TLS. |
+| D13 | **Local controls on the Display:** keyboard shortcuts (`B` blackout toggle, `F` fullscreen, `Space` start/pause, `Esc` exits fullscreen and shows the setup panel). These satisfy the addendum's "explicitly implemented local control". |
+| D14 | **Single display tab:** the Web Locks API (`stagecue-display-<sessionId>`) makes sure that only one tab per browser is the authoritative Display. |
+
+## Ambiguity log (resolved interpretations)
+
+| # | Ambiguity in brief | Decision |
+|---|---|---|
+| A1 | "Stop" vs "Reset" | **Pause** works while counting down and in overtime. **Reset** returns to `ready` with the configured duration. **Clear Timer** returns to `idle` (stand-by screen). There is no separate `stopped` status. |
+| A2 | Timer expiry while a message is visible | The message completes its own lifecycle (timed messages expire, persistent messages stay until dismissed). The compact corner timer switches to overtime styling right away (red pill, `+00:00:05`). The full red TIME UP screen appears when the message ends. Setting `overtimeInterruptsMessage` (default `false`) dismisses the message at expiry instead. |
+| A3 | Start Timer when nothing is displayed | `TIMER_START` is valid only from `ready`. The Controller offers a "Display & Start" button, which sends `TIMER_SET` and then `TIMER_START`. |
+| A4 | Changing the timer while one is running | `TIMER_SET` is accepted in any status, but the Controller asks for confirmation when the timer is `running`, `paused` or `overtime`. It is a "destructive" command (see A6). |
+| A5 | Which clock the Controller shows | The Controller never uses the Display's wall clock. It anchors the snapshot's `computed.remainingMs` to its own `performance.now()` at receipt. The Display re-publishes a snapshot on every change and every 30 s. |
+| A6 | "Stale commands" | A command is rejected as `STALE` if it is more than 10 s old by server time when it arrives. Destructive commands (`TIMER_SET`, `TIMER_RESET`, `TIMER_CLEAR`) are rejected as `STALE_VIEW` if `baseRevision` < the Display's current revision. The Controller then refreshes and asks the operator to confirm again. |
+| A7 | Display opened while offline | The Display runs in **local-only mode** with keyboard controls. When the network returns, it creates or resumes its session and pairing becomes available. |
+| A8 | Number of controllers | One active controller in the MVP. More controllers are post-MVP. |
+| A9 | Fullscreen after a reload | Browsers require a user gesture to enter fullscreen. After a reload the Display renders the presentation in the full viewport immediately and shows a 4 s hint, "Press F for fullscreen", in a corner. This is a documented limitation. |
+| A10 | Local Wi-Fi fallback (§6.5) | Investigated only (see HLD §15, R6). It is **not** built in the MVP. Browsers cannot open a listening socket, and WebRTC still needs signalling. This is noted as post-MVP. |
+| A11 | Custom domain later | The PWA origin will change. Installed PWAs and IndexedDB are bound to their origin. The migration procedure is in 06-Deployment §9. |
