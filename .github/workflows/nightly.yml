@@ -1,0 +1,46 @@
+name: Nightly cross-browser E2E
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: stagecue
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: stagecue
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U stagecue" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: stagecue
+      DB_USERNAME: stagecue
+      DB_PASSWORD: secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, intl, mbstring, pcntl
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: npm ci
+      - run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate --force
+      - run: npm run build
+      - run: npx playwright install --with-deps
+      - run: npm run test:e2e -- --project=webkit --project=firefox
