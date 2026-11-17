@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "type": "command",
+  "sessionId": "01JD3Q8Z6R0V5M8K2Y7T1N4B9C",
+  "commandId": "0193a3b4-8c2e-7d11-9f0a-5b2c1e4d6f81",
+  "seq": 68,
+  "name": "PRESENTATION_NEW",
+  "payload": {},
+  "baseRevision": 41,
+  "issuer": {
+    "deviceId": "01JD3R0000000000000000CTR1",
+    "role": "controller"
+  },
+  "issuedAt": 1794660100011,
+  "relayedAt": 1794660100101
+}

@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "type": "state",
+  "sessionId": "01JD3Q8Z6R0V5M8K2Y7T1N4B9C",
+  "presentationId": "01JD3S0000000000000000PRES",
+  "revision": 42,
+  "capturedAtWall": 1794660100180,
+  "state": {
+    "schema": 1,
+    "presentationId": "01JD3S0000000000000000PRES",
+    "revision": 42,
+    "display": {
+      "blackout": false
+    },
+    "timer": {
+      "status": "running",
+      "durationMs": 900000,
+      "startedAtWall": 1794660000000,
+      "endsAtWall": 1794660900000
+    },
+    "message": {
+      "status": "showing",
+      "id": "0193a3b4-8c2e-7d11-9f0a-aaaaaaaaaaaa",
+      "text": "Please take your seats",
+      "mode": "timed",
+      "durationMs": 10000,
+      "shownAtWall": 1794660100150,
+      "expiresAtWall": 1794660110150,
+      "corner": "tr"
+    },
+    "settings": {
+      "defaultCorner": "tr",
+      "overtimeInterruptsMessage": false,
+      "defaultMessageDurationMs": 10000
+    },
+    "updatedAtWall": 1794660100150
+  },
+  "computed": {
+    "timerRemainingMs": 899820,
+    "overtimeMs": 0,
+    "messageRemainingMs": 9970
+  },
+  "lastEvents": [
+    "MessageShown"
+  ],
+  "acks": [
+    {
+      "commandId": "0193a3b4-8c2e-7d11-9f0a-5b2c1e4d6f76",
+      "seq": 63,
+      "result": "APPLIED"
+    }
+  ]
+}

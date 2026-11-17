@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "presentationId": "01JD3S0000000000000000PRES",
+  "revision": 7,
+  "display": {
+    "blackout": false
+  },
+  "timer": {
+    "status": "idle"
+  },
+  "message": {
+    "status": "showing",
+    "id": "0193a3b4-8c2e-7d11-9f0a-bbbbbbbbbbbb",
+    "text": "Line one\nLine two",
+    "mode": "persistent",
+    "durationMs": null,
+    "shownAtWall": 1794660000000,
+    "expiresAtWall": null,
+    "corner": "bl"
+  },
+  "settings": {
+    "defaultCorner": "tr",
+    "overtimeInterruptsMessage": false,
+    "defaultMessageDurationMs": 10000
+  },
+  "updatedAtWall": 1794660100150
+}

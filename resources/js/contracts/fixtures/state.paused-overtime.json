@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "presentationId": "01JD3S0000000000000000PRES",
+  "revision": 50,
+  "display": {
+    "blackout": false
+  },
+  "timer": {
+    "status": "paused",
+    "durationMs": 900000,
+    "remainingMs": -12000,
+    "pausedAtWall": 1794660912000,
+    "startedAtWall": 1794660000000
+  },
+  "message": {
+    "status": "none"
+  },
+  "settings": {
+    "defaultCorner": "tr",
+    "overtimeInterruptsMessage": false,
+    "defaultMessageDurationMs": 10000
+  },
+  "updatedAtWall": 1794660100150
+}
