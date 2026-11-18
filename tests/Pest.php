@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -56,13 +57,25 @@ function something()
 */
 
 /**
+ * A24 — a logged-in account token. The same username always yields the same account within a test.
+ */
+function accountToken(string $username = 'team'): string
+{
+    $user = User::query()->where('username', $username)->first()
+        ?? User::query()->create(['username' => $username, 'password' => 'password123']);
+
+    return $user->createToken('account:test', ['account'], now()->addDays(90))->plainTextToken;
+}
+
+/**
  * Creates a Display session through the API.
  *
  * @return array{session: string, device: string, token: string, code: string, pairingToken: string, body: array<string, mixed>}
  */
-function createDisplay(string $name = 'Main Hall TV'): array
+function createDisplay(string $name = 'Main Hall TV', string $account = 'team'): array
 {
-    $body = test()->withoutToken()->postJson('/api/sessions', ['displayName' => $name])->assertCreated()->json();
+    $accountToken = accountToken($account);
+    $body = asDevice($accountToken)->postJson('/api/sessions', ['displayName' => $name])->assertCreated()->json();
     app('auth')->forgetGuards();
 
     return [
@@ -71,6 +84,7 @@ function createDisplay(string $name = 'Main Hall TV'): array
         'token' => $body['token'],
         'code' => $body['pairing']['code'],
         'pairingToken' => $body['pairing']['token'],
+        'account' => $accountToken,
         'body' => $body,
     ];
 }
@@ -78,12 +92,12 @@ function createDisplay(string $name = 'Main Hall TV'): array
 /**
  * Pairs a Controller to a display created with createDisplay().
  *
- * @param  array{code: string}  $display
+ * @param  array{code: string, account: string}  $display
  * @return array{session: string, device: string, token: string, body: array<string, mixed>}
  */
 function pairController(array $display, string $deviceName = 'Phone'): array
 {
-    $body = test()->withoutToken()->postJson('/api/pairings', ['code' => $display['code'], 'deviceName' => $deviceName])->assertCreated()->json();
+    $body = asDevice($display['account'])->postJson('/api/pairings', ['code' => $display['code'], 'deviceName' => $deviceName])->assertCreated()->json();
     app('auth')->forgetGuards();
 
     return ['session' => $body['session']['id'], 'device' => $body['device']['id'], 'token' => $body['token'], 'body' => $body];

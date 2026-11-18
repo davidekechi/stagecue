@@ -412,7 +412,7 @@ Two agents can work in parallel: **Agent A** on the front-end core and display (
 |---|---|---|
 | P-01 | Saved timer presets | IDB on the controller first, then server-side with accounts |
 | P-02 | Saved message templates + categories | |
-| P-03 | User accounts (Fortify / starter kit auth), password reset | Devices get linked to users |
+| P-03 | User accounts (Fortify / starter kit auth), password reset | Devices get linked to users. **Partly done (A24):** username/password sign-up and login, sessions owned by an account, same-account pairing. Still open: password reset, changing the password, team members with separate logins |
 | P-04 | Multiple controllers + primary controller + activity indicators | Remove "replace on pair". Presence list UI. `baseRevision` conflicts are already handled |
 | P-05 | Multiple displays per account | A dashboard listing sessions |
 | P-06 | Branding: logos, backgrounds, fonts, colours, custom TIME UP text | The tokens already exist. Assets go in Cloud object storage + SW runtime cache |

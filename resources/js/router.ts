@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, createMemoryHistory, type RouteRecordRaw, type RouterHistory } from 'vue-router';
 import { acquireDisplayLock, releaseDisplayLock } from './display/SingleTabLock';
 import { useDisplayStore } from './stores/display';
+import { getAccount } from './account/account';
 
 export const routes: RouteRecordRaw[] = [
     { path: '/', name: 'home', component: () => import('./views/HomeView.vue') },
@@ -15,6 +16,7 @@ export const routes: RouteRecordRaw[] = [
         },
     },
     { path: '/pair', name: 'pair', component: () => import('./views/PairView.vue') },
+    { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },
     {
         path: '/control',
         name: 'control',
@@ -34,8 +36,15 @@ export const routes: RouteRecordRaw[] = [
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('./views/NotFoundView.vue') },
 ];
 
+export const ACCOUNT_ROUTES = new Set(['display', 'pair', 'control']);
+
 export function createAppRouter(history: RouterHistory = typeof window === 'undefined' ? createMemoryHistory() : createWebHistory()) {
     const router = createRouter({ history, routes });
+    // A24: the Display, pairing and the Controller all need a logged-in account. A QR link keeps its #t= token.
+    router.beforeEach((to) => {
+        if (!ACCOUNT_ROUTES.has(String(to.name)) || getAccount()) return true;
+        return { path: '/login', query: { next: to.fullPath } };
+    });
     router.afterEach((to, from) => {
         if (from.name === 'display' && to.name !== 'display') {
             releaseDisplayLock();

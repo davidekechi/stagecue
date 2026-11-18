@@ -38,7 +38,7 @@ function fakeApi(over: Partial<Record<keyof ApiClient, unknown>> = {}) {
     return api as typeof api & ApiClient;
 }
 
-async function setup(opts: { api?: ReturnType<typeof fakeApi>; online?: boolean; stored?: boolean } = {}) {
+async function setup(opts: { api?: ReturnType<typeof fakeApi>; online?: boolean; stored?: boolean; account?: { id: number; token: string } | null } = {}) {
     const db = await openStageCueDb();
     const devices = new DeviceRepo(db, 'display');
     if (opts.stored) await devices.set({ role: 'display', deviceId: 'D0', sessionId: 'S0', token: 'tok0', name: 'TV' });
@@ -67,6 +67,7 @@ async function setup(opts: { api?: ReturnType<typeof fakeApi>; online?: boolean;
         meta: new MetaRepo(db),
         makeRealtime: (config, token) => new RealtimeClient({ config, token, echoFactory: () => echo }),
         sink,
+        account: () => opts.account ?? null,
         online: () => opts.online ?? true,
         wallNow: () => T0,
         monoNow: () => 0,
@@ -118,6 +119,25 @@ describe('DisplaySession', () => {
         const before = runtime.state;
         await session.start();
         expect(api.createSession).toHaveBeenCalledTimes(1);
+        expect((await devices.get())?.sessionId).toBe('S1');
+        expect(runtime.state).toBe(before);
+        session.stop();
+    });
+
+    it('A24: opens new sessions under the logged-in account', async () => {
+        const { session, api } = await setup({ account: { id: 5, token: 'acct' } });
+        await session.start();
+        expect(api.createSession).toHaveBeenCalledWith('Display', 'acct');
+        session.stop();
+    });
+
+    it('A24: replaces a stored session that belongs to another account, keeping the presentation', async () => {
+        const api = fakeApi({ getSession: vi.fn(async (sid: string) => ({ session: { id: sid, displayName: 'TV', status: 'active', accountId: 9 }, device: { id: 'D0', role: 'display' }, controller: null, pairing: null, realtime, serverTime: T0 })) });
+        const { session, runtime, devices } = await setup({ api, stored: true, account: { id: 5, token: 'acct' } });
+        await runtime.local('TIMER_SET', { durationMs: 60_000 });
+        const before = runtime.state;
+        await session.start();
+        expect(api.createSession).toHaveBeenCalledWith('Display', 'acct');
         expect((await devices.get())?.sessionId).toBe('S1');
         expect(runtime.state).toBe(before);
         session.stop();

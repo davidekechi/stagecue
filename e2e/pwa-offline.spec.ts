@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // OFF-07: after a warm-up visit, /display loads with the network offline.
 test('OFF-07 the display shell loads offline after a first visit', async ({ page, context, browserName }) => {

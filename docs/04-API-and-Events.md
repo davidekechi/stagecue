@@ -9,7 +9,17 @@ Shared JSON fixtures for every example below live in `resources/js/contracts/fix
 
 ## 1. REST API
 
-### 1.1 `POST /sessions` — create a display session (public, throttled)
+### 1.0 Accounts (A24)
+| Endpoint | Auth | Body → response |
+|---|---|---|
+| `POST /auth/register` | public, 5/min/IP | `{ username, password, password_confirmation }` → `201 { user: { id, username }, token }`; `403 REGISTRATION_CLOSED` when sign-up is off |
+| `POST /auth/login` | public, 10/min per IP + username | `{ username, password }` → `200 { user, token }`; `422 INVALID_CREDENTIALS` |
+| `GET /auth/me` | account | → `{ user, registration: "open" \| "closed" }` |
+| `POST /auth/logout` | account | revokes this device's account token → `204` |
+
+`POST /sessions` and `POST /pairings` take the **account** token as their bearer (they were public). Every other endpoint keeps using the device token.
+
+### 1.1 `POST /sessions` — create a display session (account, throttled)
 Request
 ```json
 { "displayName": "Main Hall TV" }
@@ -37,7 +47,7 @@ Errors: `403 NOT_SESSION_MEMBER`, `410 SESSION_ENDED`.
 ### 1.4 `POST /sessions/{sid}/pairing/regenerate` (display)
 `200 { pairing: {code, token, expiresAt, url} }`. The previous code or token is invalidated.
 
-### 1.5 `POST /pairings` — pair a controller (public, throttled)
+### 1.5 `POST /pairings` — pair a controller (account — must own the Display's session, throttled)
 Request (exactly one of `code` | `token`)
 ```json
 { "code": "7KQ2MX", "deviceName": "Dave's iPhone" }
@@ -95,10 +105,11 @@ The standard Laravel/Pusher channel authorisation for `private-…` and `presenc
 | HTTP | code | retryable |
 |---|---|---|
 | 401 | `UNAUTHENTICATED` (missing, expired or revoked token) | no → the client clears its credentials. A Display re-creates its session and keeps its local state |
-| 403 | `NOT_SESSION_MEMBER`, `FORBIDDEN_ROLE` | no |
+| 401 | `ACCOUNT_REQUIRED` (a device token was sent where an account login is needed) | no → log in again |
+| 403 | `NOT_SESSION_MEMBER`, `FORBIDDEN_ROLE`, `ACCOUNT_MISMATCH` (the Display is logged in to another account), `REGISTRATION_CLOSED` | no |
 | 404 | `SESSION_NOT_FOUND`, `PAIRING_INVALID` | no |
 | 410 | `SESSION_ENDED`, `PAIRING_EXPIRED` | no |
-| 422 | `VALIDATION_FAILED` | no |
+| 422 | `VALIDATION_FAILED`, `INVALID_CREDENTIALS` | no |
 | 429 | `RATE_LIMITED` (+`Retry-After`) | yes |
 | 503 | `RELAY_UNAVAILABLE` | yes |
 

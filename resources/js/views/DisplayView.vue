@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAccount } from '@/account/account';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { systemClock } from '@/core/clock';
@@ -93,6 +94,7 @@ onMounted(async () => {
         makeRealtime: (config, token) => new RealtimeClient({ config, token, onInvalid: (event, issues) => console.warn('[stagecue] dropped invalid', event, issues) }),
         sink: store.sessionSink,
         displayName: 'Display',
+        account: getAccount,
         online: () => navigator.onLine,
     });
     store.attachSession(session);

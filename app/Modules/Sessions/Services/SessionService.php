@@ -18,10 +18,11 @@ class SessionService
 
     public function __construct(private readonly PairingService $pairing) {}
 
-    public function create(string $displayName, ?string $userAgent): CreatedSession
+    public function create(string $displayName, ?string $userAgent, ?int $userId = null): CreatedSession
     {
-        return DB::transaction(function () use ($displayName, $userAgent) {
+        return DB::transaction(function () use ($displayName, $userAgent, $userId) {
             $session = PresentationSession::query()->create([
+                'user_id' => $userId,
                 'display_name' => $displayName,
                 'status' => PresentationSession::STATUS_ACTIVE,
                 'last_activity_at' => now(),

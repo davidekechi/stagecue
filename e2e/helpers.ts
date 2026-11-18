@@ -1,6 +1,25 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
+export interface E2eAccount {
+    username: string;
+    password: string;
+}
+
+let e2eAccount: E2eAccount | null = null;
+/** Set by the `account` fixture: the account this test's Display is logged in to. */
+export function setE2eAccount(a: E2eAccount | null) {
+    e2eAccount = a;
+}
+
+/** A fresh login token for this test's account (or another account, to test a mismatch). */
+export async function accountToken(request: APIRequestContext, account: E2eAccount | null = e2eAccount): Promise<string> {
+    if (!account) throw new Error('No E2E account: import test from ./fixtures');
+    const res = await request.post('/api/auth/login', { data: account, headers: { Accept: 'application/json' } });
+    expect(res.status()).toBe(200);
+    return ((await res.json()) as { token: string }).token;
+}
+
 /** A UUIDv7-shaped id (the server only checks the UUID format). */
 export function uuid7(): string {
     const hex = Date.now().toString(16).padStart(12, '0');
@@ -19,7 +38,8 @@ export async function openDisplay(page: Page, query = '') {
 
 /** Pairs an API-level controller (no UI) using the code shown on the Display. */
 export async function pairByApi(request: APIRequestContext, code: string, deviceName = 'E2E phone') {
-    const res = await request.post('/api/pairings', { data: { code, deviceName }, headers: { Accept: 'application/json' } });
+    const account = await accountToken(request);
+    const res = await request.post('/api/pairings', { data: { code, deviceName }, headers: { Accept: 'application/json', Authorization: `Bearer ${account}` } });
     expect(res.status()).toBe(201);
     const body = await res.json();
     const sid: string = body.session.id;

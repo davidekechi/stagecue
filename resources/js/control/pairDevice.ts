@@ -2,15 +2,16 @@
 import type { ApiClient, PairResponse } from '@/transport/ApiClient';
 import type { DeviceRepo } from '@/storage/DeviceRepo';
 import type { MetaRepo } from '@/storage/MetaRepo';
+import { accountToken } from '@/account/account';
 
 export const META_REALTIME = 'realtime';
 
 export async function pairDevice(
-    deps: { api: ApiClient; devices: DeviceRepo; meta?: MetaRepo | null },
+    deps: { api: ApiClient; devices: DeviceRepo; meta?: MetaRepo | null; accountToken?: () => string | null },
     input: { code: string } | { token: string },
     deviceName: string,
 ): Promise<PairResponse> {
-    const res = await deps.api.pair(input, deviceName);
+    const res = await deps.api.pair(input, deviceName, (deps.accountToken ?? accountToken)());
     await deps.devices.set({
         role: 'controller',
         deviceId: res.device.id,
@@ -30,6 +31,11 @@ export function pairingErrorMessage(code: string | undefined): string {
             return 'That code doesn’t match a display. Check the code on the screen, or press “New code” there.';
         case 'PAIRING_EXPIRED':
             return 'That code has expired. Press “New code” on the display and try again.';
+        case 'ACCOUNT_MISMATCH':
+            return 'This display is logged in to a different account. Log in to the same account on this phone and on the display.';
+        case 'ACCOUNT_REQUIRED':
+        case 'UNAUTHENTICATED':
+            return 'Your login has expired. Log in again, then pair.';
         case 'RATE_LIMITED':
             return 'Too many attempts. Wait a minute, then try again.';
         case 'VALIDATION_FAILED':

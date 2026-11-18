@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import type { Page } from '@playwright/test';
 
 // T4.6 — milestone gate: the laptop works as a complete standalone presentation timer.
 const T = new Date('2026-11-18T10:00:00.000Z').getTime();

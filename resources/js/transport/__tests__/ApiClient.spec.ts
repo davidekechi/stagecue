@@ -26,6 +26,16 @@ describe('ApiClient', () => {
         expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
     });
 
+    it('A24: sends the account token, not the device token, when opening a session or pairing', async () => {
+        const fetch = vi.fn(async () => respond(201, { token: 't' }));
+        const api = new ApiClient({ fetch, token: () => 'device-tok' });
+        await api.pair({ code: 'ABC234' }, 'Phone', 'acct-tok');
+        await api.createSession('TV', 'acct-tok');
+        for (const call of fetch.mock.calls as unknown as Array<[string, RequestInit]>) {
+            expect((call[1].headers as Record<string, string>).Authorization).toBe('Bearer acct-tok');
+        }
+    });
+
     it('maps the error shape to a typed ApiError', async () => {
         const api = new ApiClient({ fetch: async () => respond(410, { error: { code: 'PAIRING_EXPIRED', message: 'expired', retryable: false } }) });
         const e = await api.pair({ code: 'ABC234' }, 'p').catch((x) => x);

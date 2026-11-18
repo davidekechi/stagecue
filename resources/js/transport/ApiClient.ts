@@ -19,7 +19,7 @@ export interface PairingInfo {
 }
 
 export interface CreateSessionResponse {
-    session: { id: string; displayName: string; status: string };
+    session: { id: string; displayName: string; status: string; accountId?: number | null };
     device: { id: string; role: 'display' };
     token: string;
     pairing: Required<PairingInfo>;
@@ -28,7 +28,7 @@ export interface CreateSessionResponse {
 }
 
 export interface SessionInfo {
-    session: { id: string; displayName: string; status: string };
+    session: { id: string; displayName: string; status: string; accountId?: number | null };
     device: { id: string; role: 'display' | 'controller' };
     controller: { id: string; name: string; pairedAt: number | null } | null;
     pairing: PairingInfo | null;
@@ -102,10 +102,10 @@ export class ApiClient {
         this.wallNow = deps.wallNow ?? (() => Date.now());
     }
 
-    async request<T>(method: string, path: string, body?: unknown, opts: { auth?: boolean } = {}): Promise<T> {
+    async request<T>(method: string, path: string, body?: unknown, opts: { auth?: boolean; bearer?: string | null } = {}): Promise<T> {
         const headers: Record<string, string> = { Accept: 'application/json' };
         if (body !== undefined) headers['Content-Type'] = 'application/json';
-        const token = opts.auth === false ? null : (this.deps.token?.() ?? null);
+        const token = opts.bearer !== undefined ? opts.bearer : opts.auth === false ? null : (this.deps.token?.() ?? null);
         if (token) headers.Authorization = `Bearer ${token}`;
 
         const controller = new AbortController();
@@ -140,8 +140,9 @@ export class ApiClient {
     }
 
     // ---- endpoints (04 §1) ----
-    createSession(displayName: string) {
-        return this.request<CreateSessionResponse>('POST', '/sessions', { displayName }, { auth: false });
+    /** A24: needs the account token of the logged-in team. */
+    createSession(displayName: string, accountToken: string | null = null) {
+        return this.request<CreateSessionResponse>('POST', '/sessions', { displayName }, { bearer: accountToken });
     }
     getSession(sid: string) {
         return this.request<SessionInfo>('GET', `/sessions/${sid}`);
@@ -158,8 +159,9 @@ export class ApiClient {
     leave(sid: string) {
         return this.request<void>('DELETE', `/sessions/${sid}/controller/self`);
     }
-    pair(input: { code: string } | { token: string }, deviceName: string) {
-        return this.request<PairResponse>('POST', '/pairings', { ...input, deviceName }, { auth: false });
+    /** A24: the phone's account must be the one the Display is logged in to. */
+    pair(input: { code: string } | { token: string }, deviceName: string, accountToken: string | null = null) {
+        return this.request<PairResponse>('POST', '/pairings', { ...input, deviceName }, { bearer: accountToken });
     }
     sendCommand(sid: string, command: CommandRequest) {
         return this.request<CommandResponse>('POST', `/sessions/${sid}/commands`, command);

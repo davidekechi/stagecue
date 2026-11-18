@@ -7,11 +7,13 @@ import { createAppRouter } from '@/router';
 import { ApiError, type ApiClient } from '@/transport/ApiClient';
 import { getDb } from '@/storage/db';
 import { DeviceRepo } from '@/storage/DeviceRepo';
+import { setAccount } from '@/account/account';
 
 const TOKEN = 'q3mAbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-Za';
 const ok = { session: { id: 'S1', displayName: 'Main Hall TV' }, device: { id: 'C1', role: 'controller' }, token: 'tok', realtime: { key: 'k', host: 'h', port: 443, scheme: 'https', heartbeatMode: 'whisper', staleMs: 10000 }, serverTime: 0 };
 
 async function setup(pair: ApiClient['pair']) {
+    setAccount({ id: 1, username: 'team', token: 'acct' });
     const router = createAppRouter(createMemoryHistory());
     await router.push('/pair');
     const api = { pair: vi.fn(pair) } as unknown as ApiClient;
@@ -25,7 +27,7 @@ describe('PairView', () => {
         const { w, api, router } = await setup(async () => ok as never);
         const input = w.find('[data-testid="pair-code"]');
         await input.setValue('7kq-2mx');
-        await vi.waitFor(() => expect(api.pair).toHaveBeenCalledWith({ code: '7KQ2MX' }, expect.any(String)));
+        await vi.waitFor(() => expect(api.pair).toHaveBeenCalledWith({ code: '7KQ2MX' }, expect.any(String), 'acct'));
         await vi.waitFor(async () => expect(await new DeviceRepo(await getDb(), 'controller').get()).not.toBeNull());
         expect(await new DeviceRepo(await getDb(), 'controller').get()).toMatchObject({ sessionId: 'S1', token: 'tok', sessionName: 'Main Hall TV' });
         await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/control'));
@@ -52,7 +54,7 @@ describe('PairView', () => {
         history.replaceState(null, '', `/pair#t=${TOKEN}`);
         const replace = vi.spyOn(history, 'replaceState');
         const { api } = await setup(async () => ok as never);
-        await vi.waitFor(() => expect(api.pair).toHaveBeenCalledWith({ token: TOKEN }, expect.any(String)));
+        await vi.waitFor(() => expect(api.pair).toHaveBeenCalledWith({ token: TOKEN }, expect.any(String), 'acct'));
         expect(replace).toHaveBeenCalled();
         expect(location.hash).toBe('');
     });

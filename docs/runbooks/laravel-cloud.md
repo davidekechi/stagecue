@@ -50,12 +50,13 @@ Cloud injects `DB_*` and `REVERB_*` when the resources are attached ⚠ (write d
 | `SESSION_DRIVER` | `cookie` | `cookie` |
 | `QUEUE_CONNECTION` | `sync` | `sync` |
 | `STAGECUE_HEARTBEAT_MODE` | from §5 (`whisper` or `http`) | same |
+| `STAGECUE_REGISTRATION` | `open` until your team's account exists, then `closed` (A24) | `open` |
 | `STAGECUE_REVERB_CLIENT_HOST/PORT/SCHEME` | only if the browser must use a different WebSocket host than `REVERB_HOST` | |
 
 `APP_URL` builds the QR pairing link, so it must be the public `https://…laravel.cloud` hostname. **Treat the production hostname as permanent** (installed apps and saved state are tied to it — A11).
 
 ## 5. Spike T0.3 — do whispers work on the managed WebSocket cluster?
-1. Deploy `staging`. Open `https://<staging>/display` on a laptop and `https://<staging>/pair` on a phone; pair.
+1. Deploy `staging`. Open `https://<staging>/display` on a laptop and create your team's account (Sign up). On a phone, open `https://<staging>/pair`, log in with the **same** account, and pair.
 2. On the Display's setup panel, watch the badge **Controller connected**. On the phone, watch **Display connected**.
 3. Leave both open for 2 minutes.
    - Both stay **connected** → whispers work. Keep `STAGECUE_HEARTBEAT_MODE=whisper`.
@@ -67,7 +68,7 @@ Cloud injects `DB_*` and `REVERB_*` when the resources are attached ⚠ (write d
 Settings → Deployments → **Deploy only when GitHub checks pass** (or protect `main` so it needs a green CI and a PR).
 
 ## 7. Production smoke test (5 minutes, after every production deploy)
-1. Open `/display` → a pairing code and QR appear.
+1. Open `/display` → log in if asked → a pairing code and QR appear. (The phone must be logged in to the same account.)
 2. Pair a phone by scanning the QR (inside the installed app on iPhone).
 3. Display timer 5:00 → Start → the TV counts down, the phone mirror matches.
 4. Send "Smoke test" for 5 s → it shows, then disappears.

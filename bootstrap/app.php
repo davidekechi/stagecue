@@ -2,6 +2,7 @@
 
 use App\Exceptions\ApiErrorRenderer;
 use App\Http\Middleware\AddServerTime;
+use App\Http\Middleware\EnsureAccount;
 use App\Http\Middleware\EnsureDeviceAbility;
 use App\Http\Middleware\EnsureSessionMember;
 use App\Http\Middleware\SecurityHeaders;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'session.member' => EnsureSessionMember::class,
             'ability' => EnsureDeviceAbility::class,
+            'account' => EnsureAccount::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

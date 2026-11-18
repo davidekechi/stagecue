@@ -26,6 +26,7 @@ class PairingController
             $request->filled('token') ? (string) $request->input('token') : null,
             trim((string) $request->input('deviceName')),
             $request->userAgent(),
+            $request->user()?->getKey(),
         );
 
         return new JsonResponse([

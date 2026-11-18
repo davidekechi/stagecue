@@ -32,8 +32,8 @@ it('BE-01 creates a session: 201, a working token, a pairing code and expiry', f
 });
 
 it('defaults the display name and validates it', function () {
-    $this->postJson('/api/sessions', [])->assertCreated()->assertJsonPath('session.displayName', 'Display');
-    $this->postJson('/api/sessions', ['displayName' => str_repeat('x', 61)])->assertUnprocessable();
+    asDevice(accountToken())->postJson('/api/sessions', [])->assertCreated()->assertJsonPath('session.displayName', 'Display');
+    asDevice(accountToken())->postJson('/api/sessions', ['displayName' => str_repeat('x', 61)])->assertUnprocessable();
 });
 
 it('shows the controller to the display, and hides pairing from the controller', function () {
@@ -75,7 +75,7 @@ it('BE-14 the display revokes the controller; a controller can leave', function 
 
     asDevice($d['token'])->postJson("/api/sessions/{$d['session']}/pairing/regenerate")->assertOk();
     $code = PresentationSession::find($d['session'])->pairing_code;
-    $c2 = pairController(['code' => $code]);
+    $c2 = pairController(['code' => $code, 'account' => $d['account']]);
     asDevice($d['token'])->deleteJson("/api/sessions/{$d['session']}/controller/self")->assertForbidden();
     asDevice($c2['token'])->deleteJson("/api/sessions/{$d['session']}/controller/self")->assertNoContent();
     Event::assertDispatched(ControllerRevoked::class, fn ($e) => $e->deviceId === $c2['device'] && $e->reason === 'left');

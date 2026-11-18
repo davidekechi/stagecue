@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { openDisplay, pairByApi } from './helpers';
 
 // M6 — a real round trip through Laravel + Reverb (WS-01/02/03), with an API-level controller.

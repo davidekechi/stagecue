@@ -48,6 +48,8 @@ export interface DisplaySessionDeps {
     shellConfig?: RealtimeConfig | null;
     sink: DisplaySessionSink;
     displayName?: string;
+    /** A24: the logged-in account. New sessions are opened under it; a stored session from another account is replaced. */
+    account?: () => { id: number; token: string } | null;
     online?: () => boolean;
     monoNow?: () => number;
     wallNow?: () => number;
@@ -150,6 +152,9 @@ export class DisplaySession {
                 try {
                     this.creds = stored;
                     const info = await this.deps.api.getSession(stored.sessionId);
+                    // A24: a session opened under another account (or before accounts) can't pair this team's phones.
+                    const account = this.deps.account?.();
+                    if (account && info.session.accountId !== account.id) throw new ApiError(403, 'ACCOUNT_MISMATCH', 'Session belongs to another account', false);
                     config = info.realtime;
                     this.setController(info.controller ? { id: info.controller.id, name: info.controller.name } : null);
                     this.deps.sink.onSession({ sessionId: info.session.id, displayName: info.session.displayName });
@@ -163,7 +168,7 @@ export class DisplaySession {
                 }
             }
             if (!this.creds) {
-                const created = await this.deps.api.createSession(this.deps.displayName ?? 'Display');
+                const created = await this.deps.api.createSession(this.deps.displayName ?? 'Display', this.deps.account?.()?.token ?? null);
                 this.creds = { role: 'display', deviceId: created.device.id, sessionId: created.session.id, token: created.token, name: created.session.displayName, sessionName: created.session.displayName };
                 await this.deps.devices.set(this.creds).catch(() => undefined);
                 config = created.realtime;

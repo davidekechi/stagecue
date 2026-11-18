@@ -50,6 +50,26 @@ class ApiException extends RuntimeException
         return new self('PAIRING_EXPIRED', 410, 'That pairing code has expired. Ask for a new one.');
     }
 
+    public static function invalidCredentials(): self
+    {
+        return new self('INVALID_CREDENTIALS', 422, 'That username and password don’t match an account.');
+    }
+
+    public static function registrationClosed(): self
+    {
+        return new self('REGISTRATION_CLOSED', 403, 'New accounts can’t be created right now. Ask your team for the login.');
+    }
+
+    public static function accountRequired(): self
+    {
+        return new self('ACCOUNT_REQUIRED', 401, 'Log in to continue.');
+    }
+
+    public static function accountMismatch(): self
+    {
+        return new self('ACCOUNT_MISMATCH', 403, 'This display is logged in to a different account. Log in with the same account on both devices.');
+    }
+
     public static function relayUnavailable(): self
     {
         return new self('RELAY_UNAVAILABLE', 503, 'The real-time relay is unavailable. Try again.', true);

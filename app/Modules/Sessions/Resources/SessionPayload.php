@@ -11,10 +11,10 @@ use App\Support\ClientConfig;
 /** JSON shapes for 04 §1.1–1.5. */
 final class SessionPayload
 {
-    /** @return array{id: string, displayName: string, status: string} */
+    /** @return array{id: string, displayName: string, status: string, accountId: int|null} */
     public static function session(PresentationSession $s): array
     {
-        return ['id' => $s->id, 'displayName' => $s->display_name, 'status' => $s->status];
+        return ['id' => $s->id, 'displayName' => $s->display_name, 'status' => $s->status, 'accountId' => $s->user_id];
     }
 
     /** @return array{id: string, role: string} */

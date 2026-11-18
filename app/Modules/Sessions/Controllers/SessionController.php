@@ -21,7 +21,7 @@ class SessionController
     /** POST /sessions (04 §1.1) */
     public function store(CreateSessionRequest $request): JsonResponse
     {
-        $created = $this->sessions->create($request->displayName(), $request->userAgent());
+        $created = $this->sessions->create($request->displayName(), $request->userAgent(), $request->user()?->getKey());
 
         return new JsonResponse([
             'session' => SessionPayload::session($created->session),

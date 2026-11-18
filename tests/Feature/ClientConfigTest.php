@@ -24,5 +24,5 @@ it('renders the runtime client config in the shell, without secrets', function (
 
 it('returns the same realtime block from the session API', function () {
     config(['stagecue.heartbeat_mode' => 'whisper']);
-    $this->postJson('/api/sessions', [])->assertCreated()->assertJsonPath('realtime.heartbeatMode', 'whisper')->assertJsonMissingPath('realtime.secret');
+    asDevice(accountToken())->postJson('/api/sessions', [])->assertCreated()->assertJsonPath('realtime.heartbeatMode', 'whisper')->assertJsonMissingPath('realtime.secret');
 });

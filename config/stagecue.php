@@ -14,6 +14,10 @@ return [
     'session_idle_days' => 90,
     'snapshot_max_bytes' => 16384,
 
+    // A24: anyone with the link can create an account while this is `open`; `closed` turns sign-up off.
+    'registration' => env('STAGECUE_REGISTRATION', 'open'),
+    'account_token_days' => 90,
+
     // LLD §7.3 rate limits (per minute unless noted).
     'throttle' => [
         'session_create' => (int) env('STAGECUE_THROTTLE_SESSION_CREATE', 10),
@@ -22,6 +26,8 @@ return [
         'commands' => (int) env('STAGECUE_THROTTLE_COMMANDS', 60),
         'snapshots' => (int) env('STAGECUE_THROTTLE_SNAPSHOTS', 120),
         'heartbeat' => (int) env('STAGECUE_THROTTLE_HEARTBEAT', 30),
+        'login' => (int) env('STAGECUE_THROTTLE_LOGIN', 10),
+        'register' => (int) env('STAGECUE_THROTTLE_REGISTER', 5),
     ],
 
     // The WebSocket endpoint the BROWSER connects to. Defaults to the server-side Reverb settings.

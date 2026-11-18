@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // T3.5 — local-only Display: every flow works with the keyboard + dev panel and no backend calls.
 test.describe('local display (keyboard)', () => {

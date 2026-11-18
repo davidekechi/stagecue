@@ -52,11 +52,12 @@ class PairingService
         throw new RuntimeException('Could not allocate a unique pairing code.');
     }
 
-    public function consume(?string $code, ?string $token, string $deviceName, ?string $userAgent): PairResult
+    /** A24: the phone must be logged in to the same account as the Display that issued the code. */
+    public function consume(?string $code, ?string $token, string $deviceName, ?string $userAgent, ?int $userId = null): PairResult
     {
         try {
             /** @var array{0: PairResult, 1: list<string>} $out */
-            $out = DB::transaction(function () use ($code, $token, $deviceName, $userAgent) {
+            $out = DB::transaction(function () use ($code, $token, $deviceName, $userAgent, $userId) {
                 $query = PresentationSession::query()->lockForUpdate();
                 $session = $code !== null
                     ? $query->where('pairing_code', strtoupper($code))->first()
@@ -67,6 +68,9 @@ class PairingService
                 }
                 if ($session->pairing_expires_at === null || $session->pairing_expires_at->isPast()) {
                     throw ApiException::pairingExpired();
+                }
+                if ($session->user_id === null || $session->user_id !== $userId) {
+                    throw ApiException::accountMismatch();
                 }
 
                 $session->forceFill([
@@ -90,7 +94,7 @@ class PairingService
                 return [new PairResult($session, $device, $plain), $replaced];
             });
         } catch (ApiException $e) {
-            if ($e->errorCode === 'PAIRING_INVALID' && $code !== null) {
+            if (in_array($e->errorCode, ['PAIRING_INVALID', 'ACCOUNT_MISMATCH'], true) && $code !== null) {
                 $this->recordFailure();
             }
             throw $e;

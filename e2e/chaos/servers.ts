@@ -34,6 +34,8 @@ export class ChaosServers {
             STAGECUE_THROTTLE_COMMANDS: '10000',
             STAGECUE_THROTTLE_SNAPSHOTS: '10000',
             STAGECUE_THROTTLE_HEARTBEAT: '10000',
+            STAGECUE_THROTTLE_LOGIN: '10000',
+            STAGECUE_THROTTLE_REGISTER: '10000',
         };
     }
 

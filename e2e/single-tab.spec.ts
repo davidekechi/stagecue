@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // E2E-17: a second /display tab in the same browser shows "already open".
 test('E2E-17 second display tab is refused', async ({ context }) => {
