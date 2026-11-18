@@ -80,7 +80,7 @@ const overtimePaused = computed(() => props.view.kind === 'overtime' && props.vi
     background: var(--stage-bg);
     color: var(--stage-fg);
     transition: background-color 300ms ease;
-    font-family: var(--font-sans);
+    font-family: var(--font-stage);
     user-select: none;
 }
 /* Messages are black on white. */

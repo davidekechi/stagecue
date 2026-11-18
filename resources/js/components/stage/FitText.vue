@@ -93,7 +93,8 @@ defineExpose({ fit, fontSize });
 .fit-text-inner {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    line-height: 1.15;
-    font-weight: 600;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.01em;
 }
 </style>

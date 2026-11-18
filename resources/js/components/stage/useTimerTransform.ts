@@ -7,8 +7,14 @@ export type Placement = 'center' | 'overtime' | Corner;
 
 /** Target height of the digits as a share of the stage height (full-size timer). */
 export const DIGIT_HEIGHT_RATIO = 0.7;
-/** Inter's figure height as a share of the font size. */
-export const DIGIT_CAP_RATIO = 0.727;
+/** Bricolage Grotesque's figure height as a share of the font size (wght 800, wdth 75). */
+export const DIGIT_CAP_RATIO = 0.673;
+/**
+ * Condensed bold digits on a 16:9 screen run out of WIDTH before they reach 70% height
+ * ("15:00" ≈ 58%). The full-size timer is then stretched vertically, never more than this,
+ * so long readouts ("1:00:00") are not distorted.
+ */
+export const MAX_STRETCH = 1.4;
 /** The full-size timer may use this share of the stage width (5% safe area each side). */
 export const WIDTH_RATIO = 0.9;
 /** Compact (corner) timer: box height as a share of the stage height. */
@@ -25,6 +31,13 @@ export function fitFontSize(W: number, H: number, widthPerEm: number): number {
     const byHeight = (DIGIT_HEIGHT_RATIO * H) / DIGIT_CAP_RATIO;
     if (!(widthPerEm > 0)) return byHeight;
     return Math.min(byHeight, (WIDTH_RATIO * W) / widthPerEm);
+}
+
+/** Vertical stretch for the full-size timer so the digits approach 70% of the height (capped). */
+export function stretchFor(H: number, fontPx: number | null, placement: Placement): number {
+    if (placement !== 'center' || !fontPx || H <= 0) return 1;
+    const digits = fontPx * DIGIT_CAP_RATIO;
+    return Math.round(Math.min(MAX_STRETCH, Math.max(1, (DIGIT_HEIGHT_RATIO * H) / digits)) * 1000) / 1000;
 }
 
 /**
@@ -57,6 +70,7 @@ export const textShape = (text: string) => text.replace(/\d/g, '0');
 export function useTimerTransform(stage: Ref<HTMLElement | null>, timer: Ref<HTMLElement | null>, placement: Ref<Placement>, shape: Ref<string>) {
     const transform = ref(computeTransform(0, 0, 0, 0, 'center'));
     const fontPx = ref<number | null>(null);
+    const stretch = ref(1);
     const size = { W: 0, H: 0, w: 0, h: 0 };
     let observer: ResizeObserver | null = null;
 
@@ -79,6 +93,7 @@ export function useTimerTransform(stage: Ref<HTMLElement | null>, timer: Ref<HTM
             if (fontPx.value === null || Math.abs(next - fontPx.value) > 0.5) fontPx.value = next; // → resize → measure again
         }
         transform.value = computeTransform(size.W, size.H, size.w, size.h, placement.value);
+        stretch.value = stretchFor(size.H, fontPx.value, placement.value);
     };
 
     onMounted(() => {
@@ -99,5 +114,5 @@ export function useTimerTransform(stage: Ref<HTMLElement | null>, timer: Ref<HTM
     // A new format (e.g. 59:59 → 1:00:00 or overtime) has a new width: refit.
     watch(shape, () => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(measure) : measure()));
 
-    return { transform, fontPx, measure };
+    return { transform, fontPx, stretch, measure };
 }

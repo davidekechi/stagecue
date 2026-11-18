@@ -12,7 +12,7 @@ const props = defineProps<{
 
 const el = ref<HTMLElement | null>(null);
 const shape = computed(() => textShape(props.text));
-const { transform, fontPx } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'), shape);
+const { transform, fontPx, stretch } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'), shape);
 const compact = computed(() => props.placement !== 'center' && props.placement !== 'overtime');
 const moving = ref(false);
 
@@ -36,7 +36,7 @@ defineExpose({ el });
         @transitionend="moving = false"
         @transitioncancel="moving = false"
     >
-        {{ text }}
+        <span class="digits" :style="{ transform: `scaleY(${stretch})` }">{{ text }}</span>
     </div>
 </template>
 
@@ -51,9 +51,11 @@ defineExpose({ el });
     border-radius: 0.14em;
     /* Until the first measurement: a safe size that fits a 16:9 or 4:3 stage. */
     font-size: min(60cqh, 30cqw);
-    font-weight: 700;
+    /* Tall and bold: Bricolage Grotesque, condensed (wdth 75), heaviest weight. */
+    font-weight: 800;
+    font-stretch: 75%;
     line-height: 1;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
     white-space: nowrap;
     color: var(--stage-fg);
     transform-origin: center;
@@ -61,6 +63,11 @@ defineExpose({ el });
     transition:
         transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1),
         background-color 400ms ease;
+}
+.digits {
+    display: inline-block;
+    transform-origin: center;
+    transition: transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .stage-timer.is-moving {
     will-change: transform;
@@ -74,7 +81,8 @@ defineExpose({ el });
     background: var(--overtime-bg);
 }
 @media (prefers-reduced-motion: reduce) {
-    .stage-timer {
+    .stage-timer,
+    .digits {
         transition-duration: 0ms;
     }
 }
