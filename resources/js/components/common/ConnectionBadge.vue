@@ -17,10 +17,10 @@ const serverTone = computed(() => (props.server === 'online' ? 'ok' : 'bad'));
 <template>
     <div class="flex flex-wrap items-center gap-2 text-xs font-semibold" data-testid="connection-badge" role="status" aria-live="polite">
         <span class="pill" :data-tone="serverTone" data-testid="badge-server" :aria-label="`Server ${server}`">
-            <i aria-hidden="true"></i>{{ compact ? '' : 'Server · ' }}{{ server === 'online' ? 'Online' : 'Offline' }}
+            <i aria-hidden="true"></i>{{ compact ? '' : 'Server ' }}{{ server === 'online' ? 'online' : 'offline' }}
         </span>
         <span class="pill" :data-tone="peerInfo.tone" data-testid="badge-peer" :data-state="peer" :aria-label="`${peerLabel} ${peerInfo.text}`">
-            <i aria-hidden="true"></i>{{ peerLabel }} · {{ peerInfo.text }}
+            <i aria-hidden="true"></i>{{ peerLabel }} {{ peerInfo.text.toLowerCase() }}
         </span>
     </div>
 </template>

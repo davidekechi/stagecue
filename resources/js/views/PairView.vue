@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // T7.1 — pair this phone by code, by QR link (#t=…) or with the in-app scanner.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { guessDeviceName, isIosBrowserTab, isValidCode, normalizeCode, startScanner, tokenFromHash, type ScannerHandle } from '@/control/QrScanner';
 import { pairDevice, pairingErrorMessage } from '@/control/pairDevice';
 import { ApiClient, ApiError } from '@/transport/ApiClient';
@@ -11,6 +11,14 @@ import { MetaRepo } from '@/storage/MetaRepo';
 
 const props = defineProps<{ api?: ApiClient }>();
 const router = useRouter();
+const route = useRoute();
+const REASONS: Record<string, string> = {
+    revoked: 'The display disconnected this phone. Pair again with the code on the screen.',
+    replaced: 'Another phone was paired with the display, so this one was disconnected.',
+    ended: 'The display ended its session. Pair again with the new code on the screen.',
+    left: 'This phone is no longer paired.',
+};
+const reason = computed(() => REASONS[String(route.query.reason ?? '')] ?? null);
 const api = props.api ?? new ApiClient();
 
 const code = ref('');
@@ -103,6 +111,8 @@ onBeforeUnmount(closeScanner);
                 <h1 class="mt-1 text-[1.75rem] font-bold leading-tight">Pair this phone</h1>
                 <p class="mt-2 text-[0.95rem] leading-relaxed text-muted">Enter the code from the display’s setup panel, or scan its QR code.</p>
             </header>
+
+            <p v-if="reason" class="rounded-2xl border border-standby/50 bg-standby/10 px-4 py-3 text-[0.95rem] leading-snug" role="status" data-testid="pair-reason">{{ reason }}</p>
 
             <div v-if="existing" class="rounded-2xl bg-panel p-4" data-testid="pair-existing">
                 <p class="text-[0.95rem]">This phone is already paired{{ existing.sessionName ? ` with ${existing.sessionName}` : '' }}.</p>

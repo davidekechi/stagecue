@@ -70,6 +70,10 @@ export class ControllerRuntime {
         return this._mirror;
     }
 
+    get token(): string | null {
+        return this.creds?.token ?? null;
+    }
+
     get sessionId(): string | null {
         return this.creds?.sessionId ?? null;
     }

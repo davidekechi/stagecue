@@ -20,7 +20,7 @@ describe('PairingCard', () => {
         expect(w.find('[data-testid="pairing-code"]').text().replace(/\s/g, '')).toBe('7KQ2MX');
         expect(w.find('[data-testid="pairing-expiry"]').text()).toBe('Expires in 2:05');
         expect(w.find('[data-testid="pairing-qr"]').attributes('src')).toMatch(/^data:image\/png;base64,/);
-        expect(w.find('[data-testid="connection-badge"]').text()).toContain('Controller · Disconnected');
+        expect(w.find('[data-testid="connection-badge"]').text()).toContain('Controller disconnected');
     });
 
     it('emits regenerate and asks before revoking', async () => {
