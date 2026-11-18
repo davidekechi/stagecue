@@ -7,14 +7,15 @@ export type Placement = 'center' | 'overtime' | Corner;
 
 /** Target height of the digits as a share of the stage height (full-size timer). */
 export const DIGIT_HEIGHT_RATIO = 0.7;
-/** Bricolage Grotesque's figure height as a share of the font size (wght 800, wdth 75). */
-export const DIGIT_CAP_RATIO = 0.673;
+/** DM Sans' figure height as a share of the font size (wght 800). */
+export const DIGIT_CAP_RATIO = 0.712;
 /**
- * Condensed bold digits on a 16:9 screen run out of WIDTH before they reach 70% height
- * ("15:00" ≈ 58%). The full-size timer is then stretched vertically, never more than this,
- * so long readouts ("1:00:00") are not distorted.
+ * DM Sans has no condensed width, so its bold digits run out of WIDTH on a 16:9 screen long
+ * before 70% height ("15:00" ≈ 38%). The full-size timer is stretched vertically to make the
+ * digits tall — up to this factor, which puts "15:00" at ~70% and "1:00:00" at ~55% of a
+ * 16:9 stage.
  */
-export const MAX_STRETCH = 1.4;
+export const MAX_STRETCH = 1.95;
 /** The full-size timer may use this share of the stage width (5% safe area each side). */
 export const WIDTH_RATIO = 0.9;
 /** Compact (corner) timer: box height as a share of the stage height. */

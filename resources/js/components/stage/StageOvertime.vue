@@ -27,10 +27,9 @@ defineProps<{ active: boolean; paused: boolean }>();
     top: 9%;
     margin: 0;
     text-align: center;
-    /* Condensed and bold. "TIME UP!" is 2.72 em wide at wdth 75 → 90% of the width = 33cqw. */
-    font-size: min(46cqh, 33cqw);
+    /* "TIME UP!" is 3.84 em wide in DM Sans 800 → 90% of the width = 23.4cqw. */
+    font-size: min(46cqh, 23.4cqw);
     font-weight: 800;
-    font-stretch: 75%;
     letter-spacing: 0;
     line-height: 1;
     white-space: nowrap;
