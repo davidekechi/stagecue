@@ -171,6 +171,8 @@ export interface Ack {
     result: AckResult;
     code?: RejectCode | null;
     message?: string | null;
+    /** T9.4: relayedAt → applied on the Display, server-clock corrected (sampled 1 in 10). */
+    latencyMs?: number | null;
 }
 
 export interface Computed {

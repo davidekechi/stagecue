@@ -187,6 +187,7 @@ export const ackSchema = z.strictObject({
     result: z.enum(['APPLIED', 'REJECTED', 'DUPLICATE']),
     code: rejectCodeSchema.nullable().optional(),
     message: z.string().max(500).nullable().optional(),
+    latencyMs: z.number().int().min(0).max(600_000).nullable().optional(),
 });
 
 export const domainEventSchema = z.enum([

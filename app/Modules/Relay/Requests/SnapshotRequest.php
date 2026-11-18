@@ -30,6 +30,7 @@ class SnapshotRequest extends FormRequest
             'acks.*.result' => ['required', 'in:APPLIED,REJECTED,DUPLICATE'],
             'acks.*.code' => ['nullable', 'in:INVALID_STATE,INVALID_PAYLOAD,STALE,STALE_VIEW,DUPLICATE,UNKNOWN_COMMAND'],
             'acks.*.message' => ['nullable', 'string', 'max:500'],
+            'acks.*.latencyMs' => ['nullable', 'integer', 'min:0', 'max:600000'],
         ];
     }
 

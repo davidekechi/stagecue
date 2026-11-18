@@ -156,6 +156,10 @@ class RelayService
                 'REJECTED' => SessionCommand::STATUS_REJECTED,
                 default => null,
             };
+            if (isset($ack['latencyMs'])) {
+                // T9.4: relay → applied on the Display (server clock). Chart p95 from these lines.
+                Log::info('command applied', ['session_id' => $session->id, 'command_id' => $ack['commandId'], 'apply_ms' => (int) $ack['latencyMs']]);
+            }
             $q = SessionCommand::query()->where('session_id', $session->id)->where('command_id', $ack['commandId']);
             if ($status !== null) {
                 $q->update(['status' => $status, 'result_code' => $ack['code'] ?? null, 'acked_at' => now()]);

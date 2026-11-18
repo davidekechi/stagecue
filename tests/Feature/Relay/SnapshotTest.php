@@ -5,6 +5,7 @@ use App\Modules\Relay\Events\StateUpdated;
 use App\Modules\Sessions\Models\PresentationSession;
 use App\Modules\Sessions\Models\SessionCommand;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 function snapshotBody(int $revision, array $acks = [], string $presentationId = '01JD3S0000000000000000PRES'): array
@@ -104,4 +105,14 @@ it('enforces the 16 KB state limit, the shape and the display role', function ()
     $many = snapshotBody(1, array_fill(0, 51, ['commandId' => (string) Str::uuid7(), 'result' => 'APPLIED']));
     asDevice($d['token'])->postJson($url, $many)->assertUnprocessable();
     asDevice($c['token'])->postJson($url, snapshotBody(1))->assertForbidden();
+});
+
+it('T9.4 logs the sampled relay→apply latency from acks', function () {
+    Event::fake([StateUpdated::class]);
+    Log::spy();
+    $d = createDisplay();
+    $id = (string) Str::uuid7();
+    asDevice($d['token'])->postJson("/api/sessions/{$d['session']}/snapshots", snapshotBody(1, [['commandId' => $id, 'result' => 'APPLIED', 'latencyMs' => 183]]))->assertStatus(202);
+    Log::shouldHaveReceived('info')->withArgs(fn ($m, $c) => $m === 'command applied' && $c['apply_ms'] === 183 && $c['command_id'] === $id);
+    asDevice($d['token'])->postJson("/api/sessions/{$d['session']}/snapshots", snapshotBody(2, [['commandId' => $id, 'result' => 'APPLIED', 'latencyMs' => -5]]))->assertUnprocessable();
 });

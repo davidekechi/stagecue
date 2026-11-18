@@ -51,6 +51,8 @@ export interface DisplayRuntimeDeps {
 }
 
 export const STALE_MS = 10_000;
+/** T9.4: report the relay→apply latency on every Nth applied remote command. */
+export const LATENCY_SAMPLE_EVERY = 10;
 
 type Due = { at: number; name: InternalEvent };
 
@@ -94,6 +96,7 @@ export class DisplayRuntime {
     private readonly loop: TickLoop;
     private readonly warnings: RuntimeWarnings = { storageFailed: false, recoveredFromCorrupt: false };
     private booted = false;
+    private appliedRemote = 0;
 
     constructor(private readonly deps: DisplayRuntimeDeps) {
         this.reconciler = deps.reconciler ?? new ClockReconciler(deps.clock);
@@ -209,6 +212,8 @@ export class DisplayRuntime {
             }
             const record: ProcessedRecord = { commandId: env.commandId, appliedAt: now, result: 'APPLIED', seq: env.seq };
             const ack: Ack = { ...base, result: 'APPLIED' };
+            // Sampled latency, on the server's clock so device skew does not count.
+            if (serverNow !== null && this.appliedRemote++ % LATENCY_SAMPLE_EVERY === 0) ack.latencyMs = Math.max(0, Math.round(serverNow - env.relayedAt));
             if (r.changed) {
                 await this.commitState(r.state, r.events, record, ack);
             } else {

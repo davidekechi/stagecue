@@ -205,3 +205,20 @@ describe('SnapshotPublisher', () => {
         expect(periodic).toBeNull();
     });
 });
+
+describe('T9.4 apply latency', () => {
+    it('reports relay→apply latency on the server clock for 1 in 10 applied commands', async () => {
+        const { rt, acks } = await setup(() => T0 + 250);
+        for (let i = 0; i < 11; i++) await rt.handleRemote(env(i % 2 ? 'BLACKOUT_ON' : 'BLACKOUT_OFF', {}, { relayedAt: T0 + 100 }));
+        const withLatency = acks.filter((a) => a.latencyMs !== undefined);
+        expect(withLatency.map((a) => a.latencyMs)).toEqual([150, 150]); // the 1st and the 11th
+        rt.stop();
+    });
+
+    it('omits latency when the server clock is unknown', async () => {
+        const { rt, acks } = await setup(() => null);
+        await rt.handleRemote(env('BLACKOUT_ON'));
+        expect(acks[0]?.latencyMs).toBeUndefined();
+        rt.stop();
+    });
+});
