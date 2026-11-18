@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # On main every push finishes its run (a newer push queues behind it), so rapid pushes never
+  # leave a commit untested. Superseded pull-request runs are still cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
