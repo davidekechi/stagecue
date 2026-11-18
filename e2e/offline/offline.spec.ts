@@ -10,6 +10,8 @@ async function startTimer(phone: Page, display: Page, chip = 'chip-15') {
     await phone.getByTestId(chip).click();
     await phone.getByTestId('btn-display-start').click();
     await expect(timer(display)).not.toHaveText(/^15:00/, { timeout: 8_000 });
+    // …and the phone has seen it too (its mirror drives the buttons).
+    await expect(phone.getByTestId('btn-pause')).toBeVisible({ timeout: 8_000 });
 }
 
 test('OFF-01/03 + WS-05: the controller drops offline mid-countdown, the display carries on, then it resyncs', async ({ displayPage, controllerPage }) => {
