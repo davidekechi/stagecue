@@ -10,7 +10,7 @@ const props = withDefaults(
         maxRatio?: number;
         iterations?: number;
     }>(),
-    { minRatio: 0.04, maxRatio: 0.4, iterations: 8 },
+    { minRatio: 0.04, maxRatio: 0.4, iterations: 10 },
 );
 
 const box = ref<HTMLElement | null>(null);
@@ -93,8 +93,8 @@ defineExpose({ fit, fontSize });
 .fit-text-inner {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    line-height: 1.05;
-    font-weight: 400;
-    letter-spacing: 0.01em;
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -0.015em;
 }
 </style>

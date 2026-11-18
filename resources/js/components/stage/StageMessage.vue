@@ -28,6 +28,8 @@ defineProps<{ message: { text: string; corner: Corner } | null; hasCompactTimer:
     inset: var(--safe);
     z-index: 10;
     color: #000; /* black text on the white message stage */
+    /* Messages are read, not glanced at: DM Sans, bold, as large as the space allows. */
+    font-family: var(--font-sans);
 }
 .stage-message[data-reserve='true'][data-corner^='t'] {
     top: calc(var(--safe) + 10cqh);
