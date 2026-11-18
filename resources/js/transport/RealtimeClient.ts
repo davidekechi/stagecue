@@ -3,7 +3,7 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import type { z } from 'zod';
 import {
-    commandEnvelopeSchema,
+    commandEnvelopeBaseSchema,
     controllerPairedSchema,
     controllerRevokedSchema,
     heartbeatSchema,
@@ -129,7 +129,7 @@ export class RealtimeClient {
     subscribeDisplay(sid: string, h: DisplayHandlers): () => void {
         const name = `session.${sid}.display`;
         const ch = this.connect().private(name);
-        this.on(ch, '.command', commandEnvelopeSchema, h.command);
+        this.on(ch, '.command', commandEnvelopeBaseSchema, h.command as ((v: unknown) => void) | undefined);
         this.on(ch, '.controller.paired', controllerPairedSchema, h.controllerPaired);
         this.on(ch, '.controller.revoked', controllerRevokedSchema, h.controllerRevoked);
         this.on(ch, '.session.ended', sessionEndedSchema, h.sessionEnded);

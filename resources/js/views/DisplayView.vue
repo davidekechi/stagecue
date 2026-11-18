@@ -5,8 +5,15 @@ import { systemClock } from '@/core/clock';
 import Stage from '@/components/stage/Stage.vue';
 import DevPanel from '@/components/display/DevPanel.vue';
 import FullscreenHint from '@/components/display/FullscreenHint.vue';
+import PairingCard from '@/components/display/PairingCard.vue';
 import SetupPanel from '@/components/display/SetupPanel.vue';
 import { DisplayRuntime } from '@/display/DisplayRuntime';
+import { DisplaySession } from '@/display/DisplaySession';
+import { SnapshotPublisher } from '@/display/SnapshotPublisher';
+import { ApiClient } from '@/transport/ApiClient';
+import { RealtimeClient, readShellConfig } from '@/transport/RealtimeClient';
+import { ServerClock } from '@/transport/ServerClock';
+import { DeviceRepo } from '@/storage/DeviceRepo';
 import { Fullscreen } from '@/display/Fullscreen';
 import { installKeyboard, keyResolvers } from '@/display/Keyboard';
 import { WakeLock } from '@/display/WakeLock';
@@ -23,11 +30,15 @@ const busy = computed(() => store.lock === 'busy');
 const booted = ref(false);
 
 let runtime: DisplayRuntime | null = null;
+let session: DisplaySession | null = null;
 let meta: MetaRepo | null = null;
 const disposers: Array<() => void> = [];
 const fullscreen = new Fullscreen({ onChange: (active) => (store.fullscreen = active) });
 const wakeLock = new WakeLock({ onChange: (state) => (store.wakeLock = state) });
-const wake = () => runtime?.wake();
+const wake = () => {
+    runtime?.wake();
+    session?.wake();
+};
 
 const loadErrors = () => meta?.errors() ?? Promise.resolve([]);
 const clockOffset = () => runtime?.clockOffset() ?? 0;
@@ -40,11 +51,25 @@ onMounted(async () => {
     if (busy.value) return;
     const db = await getDb();
     meta = new MetaRepo(db);
+    const savedClock = await meta.get<{ offsetMs: number; rttMs: number }>('serverClock').catch(() => undefined);
+    const serverClock = new ServerClock(undefined, savedClock ?? null, (best) => void meta?.set('serverClock', best).catch(() => undefined));
+    const api = new ApiClient({ token: () => session?.token ?? null, serverClock });
+    const shellConfig = readShellConfig();
+    const publisher = new SnapshotPublisher({
+        build: () => runtime!.snapshot(),
+        post: (body) => api.postSnapshot(session!.sessionId!, body),
+        enabled: () => !!session?.isReady,
+        onAuthLoss: (e) => session?.handleError(e),
+    });
     runtime = new DisplayRuntime({
         clock: systemClock,
         repo: new PresentationRepo(db),
         processed: new ProcessedCommandRepo(db),
         meta,
+        publisher,
+        serverNow: () => serverClock.now(),
+        staleMs: shellConfig?.staleMs,
+        sessionId: () => session?.sessionId ?? null,
         scheduler: {
             document,
             requestAnimationFrame: (fn) => window.requestAnimationFrame(fn),
@@ -56,6 +81,22 @@ onMounted(async () => {
     if (devPanel.value) (window as unknown as { __stagecue?: unknown }).__stagecue = { runtime, store };
     await runtime.boot();
     booted.value = true;
+
+    // Network side (optional — the presentation never waits for it).
+    session = new DisplaySession({
+        runtime,
+        publisher,
+        api,
+        devices: new DeviceRepo(db),
+        meta,
+        shellConfig,
+        makeRealtime: (config, token) => new RealtimeClient({ config, token, onInvalid: (event, issues) => console.warn('[stagecue] dropped invalid', event, issues) }),
+        sink: store.sessionSink,
+        displayName: 'Display',
+        online: () => navigator.onLine,
+    });
+    store.attachSession(session);
+    void session.start();
 
     const rt = runtime;
     store.fullscreen = fullscreen.active;
@@ -81,6 +122,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     disposers.forEach((d) => d());
     void wakeLock.release();
+    session?.stop();
+    store.attachSession(null);
     runtime?.stop();
     store.attach(null);
 });
@@ -96,7 +139,19 @@ onBeforeUnmount(() => {
     <main v-else class="fixed inset-0 bg-black" data-testid="display-view" :data-ready="booted ? 'true' : 'false'">
         <Stage :view="store.view" mode="live" />
         <template v-if="booted && !store.fullscreen">
-            <SetupPanel :load-errors="loadErrors" :clock-offset="clockOffset" @fullscreen="enterFullscreen" @new-presentation="store.localCommand('PRESENTATION_NEW')" />
+            <SetupPanel :load-errors="loadErrors" :clock-offset="clockOffset" @fullscreen="enterFullscreen" @new-presentation="store.localCommand('PRESENTATION_NEW')">
+                <template #pairing>
+                    <PairingCard
+                        :phase="store.phase"
+                        :phase-detail="store.phaseDetail"
+                        :pairing="store.pairing"
+                        :controller="store.controller"
+                        :connection="store.connection"
+                        @regenerate="store.regenerateCode()"
+                        @revoke="store.revokeController()"
+                    />
+                </template>
+            </SetupPanel>
             <FullscreenHint :fullscreen="store.fullscreen" />
         </template>
         <DevPanel v-if="devPanel" />

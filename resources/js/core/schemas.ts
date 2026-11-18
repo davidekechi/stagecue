@@ -141,6 +141,23 @@ export const commandRequestSchema = z
     })
     .superRefine(withValidPayload);
 
+const commandEnvelopeFields = {
+    v: z.literal(1),
+    type: z.literal('command'),
+    sessionId: id,
+    commandId: z.uuid(),
+    seq: z.number().int().positive(),
+    name: commandNameSchema,
+    payload: z.unknown(),
+    baseRevision: z.number().int().nonnegative().nullable(),
+    issuer: z.strictObject({ deviceId: id, role: z.enum(['display', 'controller']) }),
+    issuedAt: epochMs,
+    relayedAt: epochMs,
+};
+
+/** Envelope shape only: the Display's reducer validates the payload and acks INVALID_PAYLOAD (LLD §6.2). */
+export const commandEnvelopeBaseSchema = z.object(commandEnvelopeFields);
+
 export const commandEnvelopeSchema = z
     .strictObject({
         v: z.literal(1),

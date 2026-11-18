@@ -5,6 +5,8 @@ import { computed, ref, shallowReadonly, shallowRef } from 'vue';
 import { deriveView, type View } from '@/core/view';
 import type { ApplyResult, CommandName, CommandPayloads, DomainEvent, PresentationState } from '@/core/types';
 import type { DisplayRuntime, RuntimeWarnings } from '@/display/DisplayRuntime';
+import type { DisplayController, DisplayPairing, DisplaySession, DisplaySessionSink, SessionPhase } from '@/display/DisplaySession';
+import type { ConnectionStatus } from '@/transport/ConnectionStateMachine';
 
 export interface DisplaySink {
     onState(state: PresentationState, events: DomainEvent[]): void;
@@ -24,6 +26,44 @@ export const useDisplayStore = defineStore('display', () => {
     /** Result of the single-tab lock taken by the /display route guard. */
     const lock = ref<'pending' | 'acquired' | 'busy' | 'unsupported'>('pending');
     let runtime: DisplayRuntime | null = null;
+    let session: DisplaySession | null = null;
+    const phase = ref<SessionPhase>('offline');
+    const phaseDetail = ref<string | null>(null);
+    const sessionInfo = ref<{ sessionId: string; displayName: string } | null>(null);
+    const pairing = ref<DisplayPairing | null>(null);
+    const controller = ref<DisplayController | null>(null);
+    const connection = ref<ConnectionStatus>({ server: 'offline', peer: 'disconnected' });
+
+    const sessionSink: DisplaySessionSink = {
+        onPhase(p, detail) {
+            phase.value = p;
+            phaseDetail.value = detail ?? null;
+        },
+        onSession(info) {
+            sessionInfo.value = info;
+        },
+        onPairing(p) {
+            pairing.value = p;
+        },
+        onController(c) {
+            controller.value = c;
+        },
+        onConnection(s) {
+            connection.value = s;
+        },
+    };
+
+    function attachSession(s: DisplaySession | null): void {
+        session = s;
+    }
+
+    function regenerateCode(): Promise<void> {
+        return session?.regeneratePairing() ?? Promise.resolve();
+    }
+
+    function revokeController(): Promise<void> {
+        return session?.revokeController() ?? Promise.resolve();
+    }
 
     const view = computed<View>(() => (_state.value ? deriveView(_state.value, _now.value) : { kind: 'standby' }));
 
@@ -61,6 +101,16 @@ export const useDisplayStore = defineStore('display', () => {
         lock,
         sink,
         attach,
+        phase,
+        phaseDetail,
+        sessionInfo,
+        pairing,
+        controller,
+        connection,
+        sessionSink,
+        attachSession,
+        regenerateCode,
+        revokeController,
         localCommand,
         runtime: () => runtime,
     };

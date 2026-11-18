@@ -47,7 +47,8 @@ describe('RealtimeClient', () => {
         const ch = echo.channels.get('private-session.S1.display')!;
         ch.fireSubscribed();
         ch.emit('.command', fixture('command.TIMER_SET'));
-        ch.emit('.command', { ...fixture('command.TIMER_SET'), payload: { durationMs: 5 } }); // invalid → dropped
+        ch.emit('.command', { ...fixture('command.TIMER_SET'), payload: { durationMs: 5 } }); // bad payload → delivered, the reducer acks INVALID_PAYLOAD
+        ch.emit('.command', { ...fixture('command.TIMER_SET'), seq: 'x' }); // bad envelope → dropped
         ch.emit('.controller.paired', fixture('event.controller-paired'));
         ch.emit('.controller.revoked', fixture('event.controller-revoked'));
         ch.emit('.session.ended', fixture('event.session-ended'));
@@ -55,7 +56,7 @@ describe('RealtimeClient', () => {
         for (const cb of ch.errorCbs) cb({ status: 403 });
 
         expect(h.subscribed).toHaveBeenCalledTimes(1);
-        expect(h.command).toHaveBeenCalledTimes(1);
+        expect(h.command).toHaveBeenCalledTimes(2);
         expect(h.command.mock.calls[0]![0]).toMatchObject({ name: 'TIMER_SET', seq: 57 });
         expect(onInvalid).toHaveBeenCalledWith('.command', expect.anything());
         for (const fn of [h.controllerPaired, h.controllerRevoked, h.sessionEnded, h.peerHeartbeat, h.error]) expect(fn).toHaveBeenCalledTimes(1);

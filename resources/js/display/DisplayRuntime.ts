@@ -4,7 +4,9 @@ import { uuidv7, ulid } from '@/core/ids';
 import { apply, createInitialState, internal } from '@/core/reducer';
 import { isExpired as messageDue } from '@/core/message';
 import { isExpired as timerDue } from '@/core/timer';
-import type { Ack, Action, ApplyResult, CommandName, CommandPayloads, DomainEvent, InternalEvent, PresentationState } from '@/core/types';
+import type { Ack, Action, ApplyResult, CommandEnvelope, CommandName, CommandPayloads, DomainEvent, InternalEvent, PresentationState, RejectCode } from '@/core/types';
+import { computeTiming } from '@/core/view';
+import type { SnapshotPayload } from '@/transport/ApiClient';
 import type { ProcessedRecord } from '@/storage/db';
 import type { MetaRepo } from '@/storage/MetaRepo';
 import type { PresentationRepo } from '@/storage/PresentationRepo';
@@ -40,7 +42,15 @@ export interface DisplayRuntimeDeps {
     onState?: (state: PresentationState, events: DomainEvent[]) => void;
     onNow?: (nowEff: number) => void;
     onWarning?: (warnings: RuntimeWarnings) => void;
+    /** Estimated server time for the staleness check (null = unknown → check skipped). */
+    serverNow?: () => number | null;
+    /** A6: commands older than this (server time) when they arrive are STALE. */
+    staleMs?: number;
+    /** The session this Display belongs to (commands for other sessions are ignored). */
+    sessionId?: () => string | null;
 }
+
+export const STALE_MS = 10_000;
 
 type Due = { at: number; name: InternalEvent };
 
@@ -168,6 +178,66 @@ export class DisplayRuntime {
             const action: Action = { kind: 'command', name: cmd.name, payload: cmd.payload ?? {}, commandId: uuidv7(), baseRevision: null };
             return this.applyAndCommit(action, this.reconciler.nowEff());
         });
+    }
+
+    /**
+     * LLD §6.2 — a command relayed from the Controller: dedupe → staleness → apply → persist → ack.
+     * Every delivery gets exactly one ack, carried by the next snapshot.
+     */
+    handleRemote(env: CommandEnvelope): Promise<void> {
+        const sid = this.deps.sessionId?.();
+        if (sid && env.sessionId !== sid) return Promise.resolve(); // not ours: ignore silently
+        return this.queue.run(async () => {
+            const base = { commandId: env.commandId, seq: env.seq };
+            const seen = await this.deps.processed.get(env.commandId).catch(() => undefined);
+            if (seen) {
+                // The same answer for every repeat.
+                this.publisher.publishNow(seen.result === 'APPLIED' ? { ...base, result: 'DUPLICATE' } : { ...base, result: 'REJECTED', code: seen.code ?? null, message: seen.message ?? null });
+                return;
+            }
+            const serverNow = this.deps.serverNow?.() ?? null;
+            if (serverNow !== null && serverNow - env.relayedAt > (this.deps.staleMs ?? STALE_MS)) {
+                await this.rejectRemote(env, 'STALE', 'Command arrived too late — not applied.');
+                return;
+            }
+            const action: Action = { kind: 'command', name: env.name, payload: env.payload, commandId: env.commandId, baseRevision: env.baseRevision };
+            const now = this.reconciler.nowEff();
+            const r = apply(this._state, action, now, { newPresentationId: (t) => this.newId(t) });
+            if (!r.ok) {
+                await this.rejectRemote(env, r.code, r.message);
+                return;
+            }
+            const record: ProcessedRecord = { commandId: env.commandId, appliedAt: now, result: 'APPLIED', seq: env.seq };
+            const ack: Ack = { ...base, result: 'APPLIED' };
+            if (r.changed) {
+                await this.commitState(r.state, r.events, record, ack);
+            } else {
+                // A no-op (e.g. SYNC_REQUEST, dismissing an old message): remember it and publish the current state.
+                await this.deps.processed.put(record).catch((e: unknown) => this.reportError(e, 'persist'));
+                this.publisher.publishNow(ack);
+            }
+        });
+    }
+
+    /** The snapshot of the current state (04 §1.8, without acks). */
+    snapshot(): Omit<SnapshotPayload, 'acks'> {
+        const now = this.reconciler.nowEff();
+        return {
+            v: 1,
+            presentationId: this._state.presentationId,
+            revision: this._state.revision,
+            capturedAtWall: now,
+            state: this._state,
+            computed: computeTiming(this._state, now),
+            lastEvents: this._lastEvents,
+        };
+    }
+
+    private async rejectRemote(env: CommandEnvelope, code: RejectCode, message: string): Promise<void> {
+        await this.deps.processed
+            .put({ commandId: env.commandId, appliedAt: this.reconciler.nowEff(), result: 'REJECTED', code, message, seq: env.seq })
+            .catch((e: unknown) => this.reportError(e, 'persist'));
+        this.publisher.publishNow({ commandId: env.commandId, seq: env.seq, result: 'REJECTED', code, message });
     }
 
     /** Called by the TickLoop. Reconciles clocks, raises due internal events, updates `now`. */
