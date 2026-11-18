@@ -14,7 +14,12 @@ const el = ref<HTMLElement | null>(null);
 const shape = computed(() => textShape(props.text));
 const { transform, fontPx } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'), shape);
 /** League Gothic has no tabular figures: each digit gets a fixed-width slot so the readout never wobbles. */
-const chars = computed(() => [...props.text].map((c) => ({ c, digit: c >= '0' && c <= '9' })));
+const split = computed(() => {
+    // The clock's AM/PM is drawn much smaller, so the time itself fills the space.
+    const m = props.text.match(/^(.*?)\s?(AM|PM)$/);
+    return m ? { main: m[1]!, suffix: m[2]! } : { main: props.text, suffix: null };
+});
+const chars = computed(() => [...split.value.main].map((c) => ({ c, digit: c >= '0' && c <= '9' })));
 const compact = computed(() => props.placement !== 'center' && props.placement !== 'overtime');
 const moving = ref(false);
 
@@ -38,7 +43,7 @@ defineExpose({ el });
         @transitionend="moving = false"
         @transitioncancel="moving = false"
     >
-        <span v-for="(ch, i) in chars" :key="i" :class="{ cell: ch.digit }">{{ ch.c }}</span>
+        <span v-for="(ch, i) in chars" :key="i" :class="{ cell: ch.digit }">{{ ch.c }}</span><span v-if="split.suffix" class="ampm" data-testid="clock-ampm">{{ split.suffix }}</span>
     </div>
 </template>
 
@@ -69,6 +74,11 @@ defineExpose({ el });
     display: inline-block;
     width: 0.37em; /* the widest League Gothic figure is 0.363 em */
     text-align: center;
+}
+.ampm {
+    margin-left: 0.06em;
+    font-size: 0.26em;
+    letter-spacing: 0.02em;
 }
 .stage-timer.is-moving {
     will-change: transform;

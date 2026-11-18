@@ -9,11 +9,11 @@ import { fresh, ok, T0, timedMsg } from './helpers';
 const at = (h: number, m: number) => new Date(2026, 10, 18, h, m, 30).getTime();
 
 describe('formatClock', () => {
-    it('12-hour local time with AM/PM', () => {
+    it('12-hour local time, two-digit hours, AM/PM', () => {
         expect(formatClock(at(0, 5))).toBe('12:05 AM');
-        expect(formatClock(at(9, 41))).toBe('9:41 AM');
+        expect(formatClock(at(9, 41))).toBe('09:41 AM');
         expect(formatClock(at(12, 0))).toBe('12:00 PM');
-        expect(formatClock(at(14, 45))).toBe('2:45 PM');
+        expect(formatClock(at(14, 45))).toBe('02:45 PM');
         expect(formatClock(at(23, 59))).toBe('11:59 PM');
     });
 });
@@ -39,10 +39,10 @@ describe('clock mode', () => {
     it('shows the clock only when no timer is set; moves to the corner with a message; blackout wins', () => {
         const now = at(14, 45);
         let s = ok(apply(fresh(), command('CLOCK_ON'), now));
-        expect(deriveView(s, now)).toEqual({ kind: 'clock', text: '2:45 PM' });
+        expect(deriveView(s, now)).toEqual({ kind: 'clock', text: '02:45 PM' });
 
         const withMsg = ok(apply(s, command('MESSAGE_SHOW', timedMsg(10_000)), now));
-        expect(deriveView(withMsg, now)).toEqual({ kind: 'message', message: { text: 'Please take your seats', corner: 'tr' }, compact: { text: '2:45 PM', overtime: false, clock: true } });
+        expect(deriveView(withMsg, now)).toEqual({ kind: 'message', message: { text: 'Please take your seats', corner: 'tr' }, compact: { text: '02:45 PM', overtime: false, clock: true } });
 
         s = ok(apply(s, command('TIMER_SET', { durationMs: 900_000 }), now));
         expect(deriveView(s, now)).toMatchObject({ kind: 'timer', text: '15:00' }); // a timer takes priority

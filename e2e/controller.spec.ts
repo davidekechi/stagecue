@@ -70,7 +70,8 @@ test('A23 the phone shows the time of day; it moves to the corner with a message
     await pairPhone(controllerPage, code);
     await controllerPage.getByTestId('clock-toggle').click();
     await expect(displayPage.getByTestId('stage')).toHaveAttribute('data-kind', 'clock', { timeout: 5_000 });
-    await expect(displayPage.getByTestId('stage-timer')).toHaveText(/^\d{1,2}:\d{2} (AM|PM)$/);
+    await expect(displayPage.getByTestId('stage-timer')).toHaveText(/^\d{2}:\d{2}\s?(AM|PM)$/);
+    await expect(displayPage.getByTestId('clock-ampm')).toHaveText(/^(AM|PM)$/);
     await expect(controllerPage.getByTestId('clock-toggle')).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
 
     await controllerPage.getByTestId('msg-text').fill('Lunch is served');
