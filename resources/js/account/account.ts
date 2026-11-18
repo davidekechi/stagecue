@@ -41,6 +41,16 @@ export function clearAccount(): void {
     }
 }
 
+/** A24: whether the Sign up page is offered. Set on the server (STAGECUE_SIGNUP_PAGE); hidden unless it says so. */
+export function signupEnabled(doc: Pick<Document, 'getElementById'> | undefined = globalThis.document): boolean {
+    try {
+        const text = doc?.getElementById('stagecue-config')?.textContent;
+        return !!text && (JSON.parse(text) as { signupPage?: unknown }).signupPage === true;
+    } catch {
+        return false;
+    }
+}
+
 export const accountToken = (): string | null => getAccount()?.token ?? null;
 
 interface AuthResponse {

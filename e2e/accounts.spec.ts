@@ -13,18 +13,16 @@ async function logInUi(page: Page, email: string, password: string) {
 test.describe('logged out', () => {
     test.use({ loggedOut: true });
 
-    test('ACC-01 sign up on the display, log in on the phone, pair and control', async ({ displayPage, controllerPage }) => {
+    test('ACC-01 log in on the display and the phone with the same account, pair and control', async ({ displayPage, controllerPage, request }) => {
         const email = `acc-${Date.now().toString(36)}@example.test`;
         const password = 'church-password';
+        // Sign-up is hidden in the app (A24); the account is created the way an admin would, through the API.
+        expect((await request.post('/api/auth/register', { data: { email, password, password_confirmation: password }, headers: { Accept: 'application/json' } })).status()).toBe(201);
 
         await displayPage.goto('/display');
         await expect(displayPage.getByTestId('login-view')).toBeVisible();
         await expect(displayPage.getByTestId('display-view')).toHaveCount(0);
-        await displayPage.getByTestId('register-tab').click();
-        await displayPage.getByTestId('login-email').fill(email);
-        await displayPage.getByTestId('login-password').fill(password);
-        await displayPage.getByTestId('login-confirm').fill(password);
-        await displayPage.getByTestId('login-submit').click();
+        await logInUi(displayPage, email, password);
         await expect(displayPage).toHaveURL(/\/display$/);
         const code = (await displayPage.getByTestId('pairing-code').textContent({ timeout: 15_000 }))!.replace(/\s/g, '');
 
@@ -37,6 +35,18 @@ test.describe('logged out', () => {
         await controllerPage.getByTestId('pair-name').fill('Phone');
         await controllerPage.getByTestId('pair-code').fill(code);
         await expect(controllerPage.getByTestId('badge-peer')).toHaveAttribute('data-state', 'connected', { timeout: 15_000 });
+    });
+
+    test('ACC-05 the sign-up page is hidden and its addresses go to Log in', async ({ page }) => {
+        for (const path of ['/signup', '/register', '/login?mode=register']) {
+            await page.goto(path);
+            await expect(page).toHaveURL(/\/login$/);
+            await expect(page.getByTestId('login-view')).toBeVisible();
+            await expect(page.getByTestId('register-tab')).toHaveCount(0);
+            await expect(page.getByTestId('login-confirm')).toHaveCount(0);
+        }
+        await page.goto('/');
+        await expect(page.getByTestId('home-register')).toHaveCount(0);
     });
 
     test('ACC-02 the controller screen and home need a login', async ({ page }) => {

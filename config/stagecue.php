@@ -16,6 +16,8 @@ return [
 
     // A24: anyone with the link can create an account while this is `open`; `closed` turns sign-up off.
     'registration' => env('STAGECUE_REGISTRATION', 'open'),
+    // A24: the Sign up page is hidden (`/signup` and `?mode=register` go to Log in) unless this is `shown`.
+    'signup_page' => env('STAGECUE_SIGNUP_PAGE', 'hidden'),
     'account_token_days' => 90,
 
     // LLD §7.3 rate limits (per minute unless noted).

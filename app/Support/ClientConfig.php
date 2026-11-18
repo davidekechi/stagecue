@@ -29,6 +29,7 @@ final class ClientConfig
             'reverb' => ['key' => $r['key'], 'host' => $r['host'], 'port' => $r['port'], 'scheme' => $r['scheme']],
             'heartbeatMode' => $r['heartbeatMode'],
             'staleMs' => $r['staleMs'],
+            'signupPage' => config('stagecue.signup_page') === 'shown',
         ];
     }
 }

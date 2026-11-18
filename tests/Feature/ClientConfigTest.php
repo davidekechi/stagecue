@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Str;
+
 beforeEach(fn () => $this->withoutVite());
 
 it('renders the runtime client config in the shell, without secrets', function () {
@@ -19,10 +21,18 @@ it('renders the runtime client config in the shell, without secrets', function (
         'reverb' => ['key' => 'public-key', 'host' => 'ws.example.test', 'port' => 443, 'scheme' => 'https'],
         'heartbeatMode' => 'http',
         'staleMs' => 10000,
+        'signupPage' => false,
     ])->and($html)->not->toContain('TOP-SECRET')->and($html)->not->toContain('APP-ID-123');
 });
 
 it('returns the same realtime block from the session API', function () {
     config(['stagecue.heartbeat_mode' => 'whisper']);
     asDevice(accountToken())->postJson('/api/sessions', [])->assertCreated()->assertJsonPath('realtime.heartbeatMode', 'whisper')->assertJsonMissingPath('realtime.secret');
+});
+
+it('A24: hides the sign-up page unless the server shows it', function () {
+    $shell = fn () => json_decode(Str::between($this->get('/')->getContent(), '<script id="stagecue-config" type="application/json">', '</script>'), true);
+    expect($shell()['signupPage'])->toBeFalse();
+    config(['stagecue.signup_page' => 'shown']);
+    expect($shell()['signupPage'])->toBeTrue();
 });

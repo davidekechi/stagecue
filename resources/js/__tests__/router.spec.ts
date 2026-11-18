@@ -7,7 +7,7 @@ import { createAppRouter } from '@/router';
 import { getDb } from '@/storage/db';
 import { DeviceRepo } from '@/storage/DeviceRepo';
 import { getAccount, setAccount } from '@/account/account';
-import { beforeEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 
 async function mountAt(path: string) {
     const router = createAppRouter(createMemoryHistory());
@@ -62,5 +62,48 @@ describe('router', () => {
         const { wrapper } = await mountAt('/');
         expect(wrapper.find('[data-testid="home-login"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="home-display"]').exists()).toBe(false);
+    });
+
+    describe('A24: sign-up page', () => {
+        const showSignup = (on: boolean) => {
+            document.getElementById('stagecue-config')?.remove();
+            const el = document.createElement('script');
+            el.id = 'stagecue-config';
+            el.type = 'application/json';
+            el.textContent = JSON.stringify({ signupPage: on });
+            document.body.appendChild(el);
+        };
+        afterEach(() => document.getElementById('stagecue-config')?.remove());
+
+        it.each(['/signup', '/register', '/login?mode=register'])('is hidden by default: %s lands on plain Log in', async (path) => {
+            localStorage.clear();
+            const { router, wrapper } = await mountAt(path);
+            expect(router.currentRoute.value.path).toBe('/login');
+            expect(router.currentRoute.value.query.mode).toBeUndefined();
+            expect(wrapper.find('[data-testid="register-tab"]').exists()).toBe(false);
+            expect(wrapper.find('[data-testid="login-confirm"]').exists()).toBe(false);
+            expect(wrapper.find('[data-testid="login-no-signup"]').exists()).toBe(true);
+        });
+
+        it('keeps where the user was going', async () => {
+            localStorage.clear();
+            const { router } = await mountAt('/login?mode=register&next=%2Fpair');
+            expect(router.currentRoute.value.fullPath).toBe('/login?next=/pair');
+        });
+
+        it('home has no Create an account link while hidden', async () => {
+            localStorage.clear();
+            const { wrapper } = await mountAt('/');
+            expect(wrapper.find('[data-testid="home-register"]').exists()).toBe(false);
+        });
+
+        it('comes back when the server shows it', async () => {
+            showSignup(true);
+            localStorage.clear();
+            const { router, wrapper } = await mountAt('/signup');
+            expect(router.currentRoute.value.fullPath).toBe('/login?mode=register');
+            expect(wrapper.find('[data-testid="register-tab"]').exists()).toBe(true);
+            expect(wrapper.find('[data-testid="login-confirm"]').exists()).toBe(true);
+        });
     });
 });

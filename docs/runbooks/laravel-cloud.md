@@ -51,12 +51,13 @@ Cloud injects `DB_*` and `REVERB_*` when the resources are attached ⚠ (write d
 | `QUEUE_CONNECTION` | `sync` | `sync` |
 | `STAGECUE_HEARTBEAT_MODE` | from §5 (`whisper` or `http`) | same |
 | `STAGECUE_REGISTRATION` | `open` until your team's account exists, then `closed` (A24) | `open` |
+| `STAGECUE_SIGNUP_PAGE` | `hidden` (default). Set `shown` and redeploy to offer the Sign up page again (A24) | `hidden` |
 | `STAGECUE_REVERB_CLIENT_HOST/PORT/SCHEME` | only if the browser must use a different WebSocket host than `REVERB_HOST` | |
 
 `APP_URL` builds the QR pairing link, so it must be the public `https://…laravel.cloud` hostname. **Treat the production hostname as permanent** (installed apps and saved state are tied to it — A11).
 
 ## 5. Spike T0.3 — do whispers work on the managed WebSocket cluster?
-1. Deploy `staging`. Open `https://<staging>/display` on a laptop and create your team's account (Sign up). On a phone, open `https://<staging>/pair`, log in with the **same** account, and pair.
+1. Deploy `staging`. Open `https://<staging>/display` on a laptop and log in. (The Sign up page is hidden: set `STAGECUE_SIGNUP_PAGE=shown` for the first deploy to create your team's account in the app, then remove it.). On a phone, open `https://<staging>/pair`, log in with the **same** account, and pair.
 2. On the Display's setup panel, watch the badge **Controller connected**. On the phone, watch **Display connected**.
 3. Leave both open for 2 minutes.
    - Both stay **connected** → whispers work. Keep `STAGECUE_HEARTBEAT_MODE=whisper`.

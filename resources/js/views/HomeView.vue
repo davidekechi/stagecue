@@ -3,7 +3,7 @@
 import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import InstallPrompt from "@/components/common/InstallPrompt.vue";
-import { getAccount, logout } from "@/account/account";
+import { getAccount, logout, signupEnabled } from "@/account/account";
 import { getDb } from "@/storage/db";
 import { DeviceRepo } from "@/storage/DeviceRepo";
 import { ApiClient } from "@/transport/ApiClient";
@@ -12,6 +12,7 @@ const props = defineProps<{ api?: ApiClient }>();
 const paired = ref<{ sessionName: string } | null>(null);
 const account = ref(getAccount());
 const loggingOut = ref(false);
+const canSignUp = signupEnabled();
 
 onMounted(async () => {
     if (!account.value) return;
@@ -119,6 +120,7 @@ async function onLogout() {
                     data-testid="home-login"
                     >Log in</RouterLink>
                 <RouterLink
+                    v-if="canSignUp"
                     :to="{ path: '/login', query: { mode: 'register' } }"
                     class="rounded-2xl border-2 border-panel-2 px-5 py-4 text-center text-lg font-semibold"
                     data-testid="home-register"

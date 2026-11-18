@@ -2,7 +2,7 @@
 // A24 — log in (or sign up) before using this device as a display or a controller.
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { authErrorMessage, login, register } from "@/account/account";
+import { authErrorMessage, login, register, signupEnabled } from "@/account/account";
 import { ApiClient, ApiError } from "@/transport/ApiClient";
 
 const props = defineProps<{ api?: ApiClient }>();
@@ -10,8 +10,9 @@ const api = props.api ?? new ApiClient();
 const router = useRouter();
 const route = useRoute();
 
+const canSignUp = signupEnabled();
 const mode = ref<"login" | "register">(
-    route.query.mode === "register" ? "register" : "login",
+    canSignUp && route.query.mode === "register" ? "register" : "login",
 );
 const email = ref("");
 const password = ref("");
@@ -81,6 +82,7 @@ async function submit() {
             </header>
 
             <div
+                v-if="canSignUp"
                 class="grid grid-cols-2 rounded-xl bg-panel p-1"
                 role="tablist"
                 aria-label="Log in or sign up"
@@ -188,6 +190,10 @@ async function submit() {
                     }}
                 </button>
             </form>
+
+            <p v-if="!canSignUp" class="text-sm leading-relaxed text-muted" data-testid="login-no-signup">
+                No account yet? Ask whoever runs StageCue for your team’s login.
+            </p>
         </div>
     </main>
 </template>

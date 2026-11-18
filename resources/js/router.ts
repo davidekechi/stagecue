@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, createMemoryHistory, type RouteRecordRaw, type RouterHistory } from 'vue-router';
 import { acquireDisplayLock, releaseDisplayLock } from './display/SingleTabLock';
 import { useDisplayStore } from './stores/display';
-import { getAccount } from './account/account';
+import { getAccount, signupEnabled } from './account/account';
 
 export const routes: RouteRecordRaw[] = [
     { path: '/', name: 'home', component: () => import('./views/HomeView.vue') },
@@ -16,7 +16,19 @@ export const routes: RouteRecordRaw[] = [
         },
     },
     { path: '/pair', name: 'pair', component: () => import('./views/PairView.vue') },
-    { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },
+    {
+        path: '/login',
+        name: 'login',
+        component: () => import('./views/LoginView.vue'),
+        // A24: while sign-up is hidden, the sign-up link lands on plain Log in.
+        beforeEnter: (to) => {
+            if (to.query.mode !== 'register' || signupEnabled()) return true;
+            const { mode: _mode, ...query } = to.query;
+            return { path: '/login', query, hash: to.hash };
+        },
+    },
+    { path: '/signup', redirect: (to) => ({ path: '/login', query: signupEnabled() ? { ...to.query, mode: 'register' } : to.query }) },
+    { path: '/register', redirect: '/signup' },
     {
         path: '/control',
         name: 'control',
