@@ -16,6 +16,10 @@
         <include>
             <directory>app</directory>
         </include>
+        <exclude>
+            <!-- Laravel skeleton model; StageCue has no user accounts in the MVP (P-03). -->
+            <file>app/Models/User.php</file>
+        </exclude>
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
