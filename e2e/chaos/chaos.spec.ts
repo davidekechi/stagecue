@@ -66,7 +66,8 @@ test('concurrent commands from two tabs of the same controller give one consiste
     await second.goto('/control');
     await expect(second.getByTestId('badge-peer')).toHaveAttribute('data-state', 'connected', { timeout: 20_000 });
     const before = await displayRevision(displayPage);
-    await Promise.all([controllerPage.getByTestId('btn-start').click(), second.getByTestId('btn-start').click()]);
+    // Fire both taps at once (dispatchEvent: WebKit's driver cannot click a background tab concurrently).
+    await Promise.all([controllerPage.getByTestId('btn-start').dispatchEvent('click'), second.getByTestId('btn-start').dispatchEvent('click')]);
 
     // One START applies, the other is refused (INVALID_STATE) — never two timers, never a reset.
     await expect(displayPage.getByTestId('stage-timer')).toContainText('09:5', { timeout: 5_000 });

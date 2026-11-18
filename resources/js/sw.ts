@@ -2,7 +2,7 @@
 // LLD §4.10 — app-shell service worker.
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { NetworkFirst, NetworkOnly } from 'workbox-strategies';
+import { NetworkFirst } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision: string | null }> };
 
@@ -44,8 +44,8 @@ self.addEventListener('message', (event) => {
     if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();
 });
 
-// API and broadcasting traffic must never be served from cache.
-registerRoute(({ url }) => url.pathname.startsWith('/api/') || url.pathname.startsWith('/broadcasting/'), new NetworkOnly());
+// API and broadcasting traffic is never cached: no route matches it, so the browser sends it
+// straight to the network without the service worker in between.
 
 const navigationStrategy = new NetworkFirst({ cacheName: SHELL_CACHE, networkTimeoutSeconds: 3 });
 registerRoute(

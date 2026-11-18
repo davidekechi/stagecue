@@ -29,6 +29,8 @@ export interface HeartbeatDeps {
     setInterval?: (fn: () => void, ms: number) => unknown;
     clearInterval?: (h: unknown) => void;
     onPeer?: (signal: PeerSignal) => void;
+    /** Skip heartbeats while the device knows it is offline (they could only lie about liveness). */
+    online?: () => boolean;
 }
 
 export class Heartbeat {
@@ -65,6 +67,7 @@ export class Heartbeat {
 
     /** Sends one heartbeat now. */
     beat(): void {
+        if (this.deps.online && !this.deps.online()) return;
         const { revision, presentationId } = this.deps.current();
         if (this.deps.mode === 'whisper') {
             this.deps.whisper(this.deps.sessionId, { v: 1, role: this.deps.role, deviceId: this.deps.deviceId, presentationId, revision, sentAt: this.wallNow() });

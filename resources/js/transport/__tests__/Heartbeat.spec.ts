@@ -101,3 +101,16 @@ describe('ConnectionStateMachine', () => {
         expect(tick).toBeNull();
     });
 });
+
+describe('Heartbeat while offline', () => {
+    it('sends nothing while the device reports offline', () => {
+        let online = false;
+        const whisper = vi.fn(() => true);
+        const hb = new Heartbeat({ mode: 'whisper', sessionId: 'S', role: 'controller', deviceId: 'C', current: () => ({ revision: 1, presentationId: 'P' }), whisper, postHeartbeat: async () => {}, online: () => online, setInterval: () => 1, clearInterval: () => {} });
+        hb.beat();
+        expect(whisper).not.toHaveBeenCalled();
+        online = true;
+        hb.beat();
+        expect(whisper).toHaveBeenCalledTimes(1);
+    });
+});

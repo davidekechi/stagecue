@@ -16,6 +16,8 @@ export type UnpairReason = 'none' | 'left' | 'revoked' | 'replaced' | 'ended';
 export const GAP_WAIT_MS = 1_000;
 /** HTTP fallback cadence while the live channel is down. */
 export const POLL_MS = 5_000;
+/** Ask again if the Display has not answered a SYNC_REQUEST (it may have missed it while resubscribing). */
+export const SYNC_RETRY_MS = 3_000;
 
 export interface ControllerSink {
     onMirror(m: Mirror | null): void;
@@ -63,6 +65,7 @@ export class ControllerRuntime {
     private socket: SocketState = 'initialized';
     private gapTimer: unknown = null;
     private pollTimer: unknown = null;
+    private syncTimer: unknown = null;
     private reachable: boolean | null = null;
     private stopped = false;
     readonly outbox: CommandOutbox;
@@ -263,6 +266,7 @@ export class ControllerRuntime {
             deviceId: creds.deviceId,
             current: () => ({ revision: this._mirror?.state.revision ?? null, presentationId: this._mirror?.state.presentationId ?? null }),
             whisper: (s, p) => rt.whisper(s, p),
+            online: this.deps.online,
             postHeartbeat: (s, b) => this.deps.api.heartbeat(s, b),
             monoNow: this.deps.monoNow,
             wallNow: this.deps.wallNow,
@@ -334,16 +338,31 @@ export class ControllerRuntime {
         if (!sid) return;
         const req = makeCommand('SYNC_REQUEST', {}, this._mirror?.state.revision ?? null);
         this.syncId = req.commandId;
+        this.armSyncRetry(req.commandId);
         try {
             await this.deps.api.sendCommand(sid, req as CommandRequest);
         } catch (error) {
             if (error instanceof ApiError && error.isAuthLoss) return this.lostPairing('revoked');
-            this.syncId = null; // the Display may be unreachable; the heartbeat gap check will try again
+            // Unreachable for now: the retry timer asks again.
         }
+    }
+
+    private armSyncRetry(commandId: string): void {
+        this.clearSyncRetry();
+        this.syncTimer = (this.deps.setTimeout ?? ((f, t) => globalThis.setTimeout(f, t)))(() => {
+            this.syncTimer = null;
+            if (this.syncId === commandId && this.rt && !this.stopped) void this.requestSync();
+        }, SYNC_RETRY_MS);
+    }
+
+    private clearSyncRetry(): void {
+        if (this.syncTimer !== null) (this.deps.clearTimeout ?? ((h) => globalThis.clearTimeout(h as ReturnType<typeof setTimeout>)))(this.syncTimer);
+        this.syncTimer = null;
     }
 
     private finishSync(): void {
         this.syncId = null;
+        this.clearSyncRetry();
         this.csm?.setSyncPending(false);
     }
 
@@ -376,6 +395,8 @@ export class ControllerRuntime {
 
     private teardown(): void {
         this.stopPolling();
+        this.clearSyncRetry();
+        this.syncId = null;
         this.heartbeat?.stop();
         this.csm?.stop();
         for (const fn of this.cleanups.splice(0)) fn();

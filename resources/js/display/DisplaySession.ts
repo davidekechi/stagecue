@@ -200,6 +200,7 @@ export class DisplaySession {
             deviceId: creds.deviceId,
             current: () => ({ revision: this.deps.runtime.state.revision, presentationId: this.deps.runtime.state.presentationId }),
             whisper: (s, p) => rt.whisper(s, p),
+            online: this.deps.online,
             postHeartbeat: (s, b) => this.deps.api.heartbeat(s, b),
             monoNow: this.deps.monoNow,
             wallNow: this.deps.wallNow,

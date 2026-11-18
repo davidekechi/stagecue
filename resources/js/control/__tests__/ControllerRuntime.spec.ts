@@ -230,3 +230,21 @@ describe('ControllerRuntime without the live channel (A22)', () => {
         expect(await devices.get()).not.toBeNull();
     });
 });
+
+describe('ControllerRuntime sync retry', () => {
+    it('asks again when the Display has not answered a SYNC_REQUEST within 3 s', async () => {
+        const { rt, sent, channel, echo, timeouts } = await setup();
+        await rt.start();
+        echo.setState('connected');
+        channel().fireSubscribed();
+        await vi.waitFor(() => expect(sent.map((r) => r.name)).toEqual(['SYNC_REQUEST']));
+        expect(rt.connection.peer).toBe('synchronizing');
+        timeouts.filter((t) => t.ms === 3_000).at(-1)!.fn(); // no answer
+        await vi.waitFor(() => expect(sent.map((r) => r.name)).toEqual(['SYNC_REQUEST', 'SYNC_REQUEST']));
+        expect(sent[1]!.commandId).not.toBe(sent[0]!.commandId);
+        channel().emit('.state', stateEvent(5, { acks: [{ commandId: sent[1]!.commandId, result: 'APPLIED' }] }));
+        expect(rt.connection.peer).not.toBe('synchronizing');
+        timeouts.filter((t) => t.ms === 3_000).at(-1)!.fn(); // the stale timer must not re-ask
+        expect(sent).toHaveLength(2);
+    });
+});

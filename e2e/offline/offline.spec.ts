@@ -78,7 +78,7 @@ test('OFF-09: blackout, then the controller disconnects; it stays black and the 
     await displayPage.waitForTimeout(2_000);
     await expect(displayPage.getByTestId('stage-black')).toBeVisible();
 
-    await controllerPage.reload().catch(() => undefined); // the phone app is reopened…
+    // …then the phone comes back and the app is opened again.
     await controllerPage.context().setOffline(false);
     await controllerPage.goto('/control');
     await expect(controllerPage.getByTestId('badge-peer')).toHaveAttribute('data-state', 'connected', { timeout: 20_000 });

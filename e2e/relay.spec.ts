@@ -57,6 +57,8 @@ test('a reload resumes the same session', async ({ page, request }) => {
     await expect(page.getByTestId('controller-connected')).toBeVisible({ timeout: 10_000 });
     await page.reload();
     await expect(page.getByTestId('controller-connected')).toBeVisible({ timeout: 10_000 });
+    // "Paired" can come from HTTP before the live channel is back: wait for it (commands are never replayed).
+    await expect(page.getByTestId('badge-server')).toContainText('online', { timeout: 15_000 });
     expect((await ctrl.send('BLACKOUT_ON')).status).toBe(202);
     await expect(page.getByTestId('stage-black')).toBeVisible({ timeout: 5_000 });
 });
