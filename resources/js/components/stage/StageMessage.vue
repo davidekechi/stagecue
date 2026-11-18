@@ -27,7 +27,7 @@ defineProps<{ message: { text: string; corner: Corner } | null; hasCompactTimer:
     position: absolute;
     inset: var(--safe);
     z-index: 10;
-    color: #000; /* black text on the white message stage */
+    color: var(--stage-fg); /* white text on the black stage */
     /* Messages are read, not glanced at: DM Sans, bold, as large as the space allows. */
     font-family: var(--font-sans);
 }

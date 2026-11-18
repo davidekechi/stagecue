@@ -83,10 +83,6 @@ const overtimePaused = computed(() => props.view.kind === 'overtime' && props.vi
     font-family: var(--font-stage);
     user-select: none;
 }
-/* Messages are black on white. */
-.stage[data-kind='message'] {
-    background: #fff;
-}
 /* Ready/paused: two bars at the bottom, clear of the full-size digits. */
 .stage-paused {
     position: absolute;

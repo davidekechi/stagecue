@@ -83,9 +83,8 @@ defineExpose({ el });
 .stage-timer.is-moving {
     will-change: transform;
 }
-/* In a corner the timer sits on the white message stage: a black pill, red in overtime. */
+/* In a corner, on the black message stage: plain white digits (a red pill in overtime). */
 .stage-timer.is-pill {
-    background: #000;
     color: #fff;
 }
 .stage-timer.is-red {
