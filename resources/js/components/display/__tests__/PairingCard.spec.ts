@@ -25,7 +25,7 @@ describe('PairingCard', () => {
 
     it('emits regenerate and asks before revoking', async () => {
         const w = mount(PairingCard, { props: { ...base, controller: { id: 'c', name: "Dave's iPhone" } } });
-        expect(w.find('[data-testid="controller-connected"]').text()).toContain("Controller connected: Dave's iPhone");
+        expect(w.find('[data-testid="controller-connected"]').text()).toContain("Paired with Dave's iPhone");
         await w.find('[data-testid="pairing-regenerate"]').trigger('click');
         expect(w.emitted('regenerate')).toHaveLength(1);
         await w.find('[data-testid="pairing-revoke"]').trigger('click');

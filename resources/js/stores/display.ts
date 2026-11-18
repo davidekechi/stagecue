@@ -33,6 +33,7 @@ export const useDisplayStore = defineStore('display', () => {
     const pairing = ref<DisplayPairing | null>(null);
     const controller = ref<DisplayController | null>(null);
     const connection = ref<ConnectionStatus>({ server: 'offline', peer: 'disconnected' });
+    const socketState = ref<string>('initialized');
 
     const sessionSink: DisplaySessionSink = {
         onPhase(p, detail) {
@@ -50,6 +51,9 @@ export const useDisplayStore = defineStore('display', () => {
         },
         onConnection(s) {
             connection.value = s;
+        },
+        onSocket(s) {
+            socketState.value = s;
         },
     };
 
@@ -107,6 +111,7 @@ export const useDisplayStore = defineStore('display', () => {
         pairing,
         controller,
         connection,
+        socketState,
         sessionSink,
         attachSession,
         regenerateCode,

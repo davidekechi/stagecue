@@ -14,6 +14,8 @@ import { META_REALTIME } from './pairDevice';
 
 export type UnpairReason = 'none' | 'left' | 'revoked' | 'replaced' | 'ended';
 export const GAP_WAIT_MS = 1_000;
+/** HTTP fallback cadence while the live channel is down. */
+export const POLL_MS = 5_000;
 
 export interface ControllerSink {
     onMirror(m: Mirror | null): void;
@@ -24,6 +26,8 @@ export interface ControllerSink {
     onSocket?(s: SocketState): void;
     /** T8.2 — STALE_VIEW: the display changed under the operator; ask before re-sending. */
     onConflict?(c: Conflict | null): void;
+    /** Whether StageCue answers over HTTP (independent of the live channel). */
+    onReachable?(ok: boolean): void;
 }
 
 export interface Conflict {
@@ -58,6 +62,8 @@ export class ControllerRuntime {
     private syncId: string | null = null;
     private socket: SocketState = 'initialized';
     private gapTimer: unknown = null;
+    private pollTimer: unknown = null;
+    private reachable: boolean | null = null;
     private stopped = false;
     readonly outbox: CommandOutbox;
     private readonly monoNow: () => number;
@@ -109,19 +115,62 @@ export class ControllerRuntime {
             return;
         }
         this.deps.sink.onSession({ sessionName: this.creds.sessionName ?? 'Display', deviceName: this.creds.name });
+        this.startPolling();
+        await this.connect();
+    }
+
+    /** Fetch the session (and its realtime config), paint the last-known state, open the live channel. */
+    private async connect(): Promise<void> {
+        if (!this.creds || this.rt || this.stopped) return;
         let config: RealtimeConfig | null = null;
         try {
             const info = await this.deps.api.getSession(this.creds.sessionId);
             config = info.realtime;
+            this.setReachable(true);
             this.deps.sink.onSession({ sessionName: info.session.displayName, deviceName: this.creds.name });
         } catch (error) {
             if (error instanceof ApiError && error.isAuthLoss) return this.lostPairing(error.status === 410 ? 'ended' : 'revoked');
+            this.setReachable(false);
             // Offline: carry on with the cached config; the socket reconnects when it can.
         }
+        // Show the display's last known state straight away, whether or not the live channel opens.
+        await this.refresh();
         config ??= (await this.deps.meta?.get<RealtimeConfig>(META_REALTIME).catch(() => undefined)) ?? this.deps.shellConfig ?? null;
-        if (!config?.key || this.stopped) return;
+        if (!config?.key || this.stopped || this.rt || !this.creds) return;
         await this.deps.meta?.set(META_REALTIME, config).catch(() => undefined);
         this.subscribe(config);
+    }
+
+    /**
+     * HTTP fallback while the live channel is down: keep the mirror (last known) and the pairing
+     * up to date, so nothing needs a reload. An unpair is noticed as 401/403/410 here.
+     */
+    private async refresh(): Promise<void> {
+        const sid = this.sessionId;
+        if (!sid) return;
+        try {
+            const { snapshot } = await this.deps.api.getState(sid);
+            this.setReachable(true);
+            if (snapshot) this.applySnapshot({ ...snapshot, acks: [] }, false);
+        } catch (error) {
+            if (error instanceof ApiError && error.isAuthLoss) return this.lostPairing(error.status === 410 ? 'ended' : 'revoked');
+            this.setReachable(false);
+        }
+    }
+
+    private startPolling(): void {
+        if (this.pollTimer !== null) return;
+        this.pollTimer = (this.deps.setInterval ?? ((f, t) => globalThis.setInterval(f, t)))(() => {
+            if (this.stopped || !this.creds) return;
+            if (!this.rt) void this.connect();
+            else if (this.socket !== 'connected') void this.refresh();
+        }, POLL_MS);
+    }
+
+    private setReachable(ok: boolean): void {
+        if (this.reachable === ok) return;
+        this.reachable = ok;
+        this.deps.sink.onReachable?.(ok);
     }
 
     stop(): void {
@@ -132,8 +181,11 @@ export class ControllerRuntime {
     /** visibilitychange / online / pageshow (R11: mobile sockets die in the background). */
     wake(): void {
         if (this.stopped) return;
-        if (!this.rt) void this.start();
-        else this.rt.reconnect();
+        if (!this.rt) void this.connect();
+        else {
+            this.rt.reconnect();
+            if (this.socket !== 'connected') void this.refresh();
+        }
         this.csm?.evaluate();
     }
 
@@ -317,7 +369,13 @@ export class ControllerRuntime {
         this.deps.sink.onUnpaired(reason);
     }
 
+    private stopPolling(): void {
+        if (this.pollTimer !== null) (this.deps.clearInterval ?? ((h) => globalThis.clearInterval(h as ReturnType<typeof setInterval>)))(this.pollTimer);
+        this.pollTimer = null;
+    }
+
     private teardown(): void {
+        this.stopPolling();
         this.heartbeat?.stop();
         this.csm?.stop();
         for (const fn of this.cleanups.splice(0)) fn();

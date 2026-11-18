@@ -37,6 +37,15 @@ const duration = computed({
 });
 const CONFLICT_LABELS: Partial<Record<CommandName, string>> = { TIMER_SET: 'Set timer', TIMER_RESET: 'Reset', TIMER_CLEAR: 'Clear timer', PRESENTATION_NEW: 'New presentation' };
 const conflictLabel = computed(() => (store.conflict ? (CONFLICT_LABELS[store.conflict.name] ?? store.conflict.name) : ''));
+/** Explains WHY the buttons are paused. Still paired either way — only the connection is down. */
+const linkNotice = computed(() => {
+    if (store.connection.server === 'online') {
+        return store.connection.peer === 'disconnected' ? 'Still paired. The display isn’t responding — is its window open and online? Commands wait until it’s back.' : null;
+    }
+    if (store.reachable === false) return 'This phone is offline. Still paired; the display keeps running on its own. Messages you write are saved as drafts.';
+    if (store.reachable) return 'Still paired, but the live connection is down, so commands can’t reach the display. Showing the last known state; reconnecting…';
+    return 'Connecting…';
+});
 const timerStatus = computed(() => (store.mirror ? mirrorStateAt(store.mirror, mono.value).state.timer.status : null));
 const message = computed(() => (store.mirror && store.mirror.state.message.status === 'showing' ? store.mirror.state.message : null));
 const draftPayload = computed<MessageShowPayload | null>(() => {
@@ -152,6 +161,7 @@ onBeforeUnmount(() => {
                 </div>
             </div>
             <ConnectionBadge :server="store.connection.server" :peer="store.connection.peer" peer-label="Display" />
+            <p v-if="linkNotice" class="rounded-xl border border-standby/40 bg-standby/10 px-3 py-2 text-sm leading-snug" role="status" data-testid="link-notice">{{ linkNotice }}</p>
         </header>
 
         <main class="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-4">

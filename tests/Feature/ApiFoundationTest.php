@@ -94,7 +94,13 @@ it('rejects expired tokens and slides controller token expiry', function () {
     $this->withToken($expired)->getJson("/api/test/{$session->id}/member")->assertUnauthorized();
     $this->app['auth']->forgetGuards();
 
-    $token = $controller->createToken('controller', ['controller'], now()->addHours(3));
+    $token = $controller->createToken('controller', ['controller'], now()->addDays(3));
     $this->withToken($token->plainTextToken)->getJson("/api/test/{$session->id}/controller-only")->assertOk();
-    expect($token->accessToken->fresh()->expires_at->gt(now()->addDays(6)))->toBeTrue();
+    expect($token->accessToken->fresh()->expires_at->gt(now()->addDays(89)))->toBeTrue();
+
+    // A token far from expiry is left alone (no write on every request).
+    $this->app['auth']->forgetGuards();
+    $fresh = $controller->createToken('controller', ['controller'], now()->addDays(60));
+    $this->withToken($fresh->plainTextToken)->getJson("/api/test/{$session->id}/controller-only")->assertOk();
+    expect((int) round($fresh->accessToken->fresh()->expires_at->diffInDays(now(), true)))->toBe(60);
 });

@@ -28,7 +28,7 @@ it('BE-01 creates a session: 201, a working token, a pairing code and expiry', f
 
     $session = PresentationSession::find($d['session']);
     expect($session->pairing_token_hash)->toBe(hash('sha256', $d['pairingToken']))
-        ->and($session->displayDevice->tokens()->first()->expires_at->diffInDays(now(), true))->toBeGreaterThan(29.99)->toBeLessThanOrEqual(30.0);
+        ->and($session->displayDevice->tokens()->first()->expires_at->diffInDays(now(), true))->toBeGreaterThan(89.99)->toBeLessThanOrEqual(90.0);
 });
 
 it('defaults the display name and validates it', function () {

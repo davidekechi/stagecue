@@ -14,12 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * LLD §7.3 — the device must belong to {session} and not be revoked; an ended session is 410.
- * Also slides a controller token's expiry (7 days, renewed when < 24 h remain).
+ * Also slides the device token's expiry on use (A21: pairing persists until someone unpairs).
  */
 class EnsureSessionMember
 {
-    public const CONTROLLER_TOKEN_DAYS = 7;
-
     public function handle(Request $request, Closure $next): Response
     {
         $device = $request->user();
@@ -37,19 +35,20 @@ class EnsureSessionMember
         }
 
         $request->route()?->setParameter('session', $session);
-        $this->slideControllerToken($device);
+        $this->slideToken($device);
 
         return $next($request);
     }
 
-    private function slideControllerToken(Device $device): void
+    private function slideToken(Device $device): void
     {
         $token = $device->currentAccessToken();
-        if (! $device->isController() || ! $token instanceof PersonalAccessToken || $token->expires_at === null) {
+        if (! $token instanceof PersonalAccessToken || ! $token->expires_at instanceof \DateTimeInterface) {
             return;
         }
-        if ($token->expires_at->lt(now()->addDay())) {
-            $token->forceFill(['expires_at' => now()->addDays(self::CONTROLLER_TOKEN_DAYS)])->save();
+        if ($token->expires_at->lt(now()->addDays((int) config('stagecue.token_renew_within_days')))) {
+            $days = (int) config($device->isController() ? 'stagecue.controller_token_days' : 'stagecue.display_token_days');
+            $token->forceFill(['expires_at' => now()->addDays($days)])->save();
         }
     }
 }

@@ -32,7 +32,7 @@ async function setup(api: Partial<Record<keyof ApiClient, unknown>> = {}) {
     const echo = new FakeEcho();
     let mono = 1_000;
     const timeouts: Array<{ fn: () => void; ms: number }> = [];
-    const sink: ControllerSink = { onMirror: vi.fn(), onOutbox: vi.fn(), onConnection: vi.fn(), onSession: vi.fn(), onUnpaired: vi.fn(), onSocket: vi.fn(), onConflict: vi.fn() };
+    const sink: ControllerSink = { onMirror: vi.fn(), onOutbox: vi.fn(), onConnection: vi.fn(), onSession: vi.fn(), onUnpaired: vi.fn(), onSocket: vi.fn(), onConflict: vi.fn(), onReachable: vi.fn() };
     const rt = new ControllerRuntime({
         api: fake,
         devices,
@@ -179,5 +179,54 @@ describe('ControllerRuntime STALE_VIEW', () => {
         expect(sent[2]).toMatchObject({ name: 'TIMER_RESET', baseRevision: 7 });
         expect(sent[2]!.commandId).not.toBe(sent[0]!.commandId);
         expect(sink.onConflict).toHaveBeenLastCalledWith(null);
+    });
+});
+
+describe('ControllerRuntime without the live channel (A22)', () => {
+    it('paints the last known state at once and keeps it fresh over HTTP', async () => {
+        let snapshot: StateEvent | null = stateEvent(3);
+        const intervals: Array<() => void> = [];
+        const { rt, sink } = await setup({ getState: vi.fn(async () => ({ snapshot, storedAt: 1 })) });
+        // capture the poll interval
+        (rt as unknown as { deps: { setInterval: (fn: () => void) => number } }).deps.setInterval = (fn: () => void) => (intervals.push(fn), intervals.length);
+        await rt.start();
+        expect(rt.mirror).toMatchObject({ live: false, state: { revision: 3 } });
+        expect(sink.onReachable).toHaveBeenLastCalledWith(true);
+
+        snapshot = stateEvent(4);
+        intervals[0]!(); // socket never connected → poll
+        await vi.waitFor(() => expect(rt.mirror?.state.revision).toBe(4));
+    });
+
+    it('notices an unpair over HTTP while the live channel is down', async () => {
+        let revoked = false;
+        const intervals: Array<() => void> = [];
+        const { rt, sink, devices } = await setup({
+            getState: vi.fn(async () => {
+                if (revoked) throw new ApiError(401, 'UNAUTHENTICATED', 'x', false);
+                return { snapshot: null, storedAt: null };
+            }),
+        });
+        (rt as unknown as { deps: { setInterval: (fn: () => void) => number } }).deps.setInterval = (fn: () => void) => (intervals.push(fn), intervals.length);
+        await rt.start();
+        revoked = true;
+        intervals[0]!();
+        await vi.waitFor(() => expect(sink.onUnpaired).toHaveBeenCalledWith('revoked'));
+        expect(await devices.get()).toBeNull();
+    });
+
+    it('a network failure never unpairs; it retries', async () => {
+        const intervals: Array<() => void> = [];
+        const getSession = vi.fn(async () => {
+            throw new ApiError(0, 'NETWORK', 'x', true);
+        });
+        const { rt, sink, devices } = await setup({ getSession, getState: vi.fn(async () => { throw new ApiError(0, 'NETWORK', 'x', true); }) });
+        (rt as unknown as { deps: { setInterval: (fn: () => void) => number } }).deps.setInterval = (fn: () => void) => (intervals.push(fn), intervals.length);
+        await rt.start();
+        expect(sink.onReachable).toHaveBeenLastCalledWith(false);
+        intervals[0]!();
+        await vi.waitFor(() => expect(getSession).toHaveBeenCalledTimes(2));
+        expect(sink.onUnpaired).not.toHaveBeenCalled();
+        expect(await devices.get()).not.toBeNull();
     });
 });

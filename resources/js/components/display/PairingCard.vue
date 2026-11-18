@@ -13,9 +13,11 @@ const props = withDefaults(
         pairing: DisplayPairing | null;
         controller: DisplayController | null;
         connection: ConnectionStatus;
+        /** The live channel (WebSocket) is up. */
+        liveLink?: boolean;
         now?: () => number;
     }>(),
-    { phaseDetail: null, now: () => Date.now() },
+    { phaseDetail: null, liveLink: true, now: () => Date.now() },
 );
 const emit = defineEmits<{ regenerate: []; revoke: [] }>();
 
@@ -64,13 +66,17 @@ function revoke() {
         <p v-if="phase === 'offline'" class="text-sm text-neutral-400" data-testid="pairing-offline">Offline — running in local mode. Pairing becomes available when the network returns.</p>
         <p v-else-if="phase === 'connecting'" class="text-sm text-neutral-400">Connecting to StageCue…</p>
         <p v-else-if="phase === 'error'" class="text-sm text-amber-300" data-testid="pairing-error">Can’t reach StageCue right now. Retrying… The display keeps working.</p>
+        <p v-else-if="phase === 'ready' && !liveLink" class="text-sm text-amber-300" data-testid="pairing-link-down">
+            The live connection is down, so the phone can’t control this display right now. Pairing still works and is kept. Retrying…
+        </p>
 
         <div v-if="controller" class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2" data-testid="controller-connected">
             <p class="text-sm text-emerald-200">
-                Controller connected: <strong class="text-white">{{ controller.name }}</strong>
+                Paired with <strong class="text-white">{{ controller.name }}</strong>
+                <span class="block text-xs text-neutral-300" data-testid="controller-link">{{ connection.peer === 'connected' ? 'Connected now.' : 'Not connected right now — it stays paired and reconnects by itself.' }}</span>
             </p>
             <button class="mt-2 rounded-md border px-2.5 py-1 text-xs font-medium" :class="confirmRevoke ? 'border-red-500/60 bg-red-500/15 text-red-200' : 'border-white/20 text-neutral-200 hover:bg-white/10'" data-testid="pairing-revoke" @click="revoke">
-                {{ confirmRevoke ? 'Click again to disconnect it' : 'Disconnect controller' }}
+                {{ confirmRevoke ? 'Click again to unpair it' : 'Unpair this phone' }}
             </button>
         </div>
 

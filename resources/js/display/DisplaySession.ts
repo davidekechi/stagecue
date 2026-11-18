@@ -11,6 +11,8 @@ import type { DisplayRuntime } from './DisplayRuntime';
 import type { SnapshotPublisher } from './SnapshotPublisher';
 
 export const PAIRING_POLL_MS = 30_000;
+/** While the live channel is down, re-check the session this often (pair/unpair without a reload). */
+export const FALLBACK_POLL_MS = 5_000;
 export const META_REALTIME = 'realtime';
 
 export interface DisplayPairing {
@@ -68,6 +70,8 @@ export class DisplaySession {
     private attempt = 0;
     private starting: Promise<void> | null = null;
     private stopped = false;
+    private socket: SocketState = 'initialized';
+    private lastPoll = 0;
 
     constructor(private readonly deps: DisplaySessionDeps) {}
 
@@ -215,7 +219,11 @@ export class DisplaySession {
 
         this.cleanups.push(
             rt.onConnectionState((s) => {
+                const wasUp = this.socket === 'connected';
+                this.socket = s;
                 csm.setSocket(s);
+                // Back online after a gap: catch up on anything (pair/unpair) missed meanwhile.
+                if (s === 'connected' && !wasUp) void this.refreshSession();
                 this.deps.sink.onSocket?.(s);
                 if (s === 'connected') this.deps.publisher.flush();
             }),
@@ -253,20 +261,34 @@ export class DisplaySession {
         heartbeat.start();
         csm.start();
         this.deps.publisher.start();
+        // Publish now, not only on subscribe: with the live channel down, GET /state is the
+        // phone's only view of this display (A22).
+        this.deps.publisher.publishNow();
 
-        // A17: while nobody is paired, poll the session so a rotated/consumed code is noticed.
-        const poll = this.si(() => void this.pollPairing(), PAIRING_POLL_MS);
+        // While the live channel is down: every 5 s. Otherwise, while nobody is paired: every 30 s
+        // (A17: a consumed or rotated code is noticed).
+        const poll = this.si(() => {
+            const now = (this.deps.monoNow ?? (() => performance.now()))();
+            const due = this.socket !== 'connected' || (!this.controller && now - this.lastPoll >= PAIRING_POLL_MS);
+            if (due) void this.refreshSession();
+        }, FALLBACK_POLL_MS);
         this.intervals.add(poll);
     }
 
-    private async pollPairing(): Promise<void> {
+    /** Re-reads the session over HTTP: who is paired, and whether the code is still the one shown. */
+    async refreshSession(): Promise<void> {
         const sid = this.sessionId;
-        if (!sid || this.controller) return;
+        if (!sid) return;
+        this.lastPoll = (this.deps.monoNow ?? (() => performance.now()))();
         try {
             const info = await this.deps.api.getSession(sid);
-            if (info.controller) {
-                this.setController({ id: info.controller.id, name: info.controller.name });
-                this.setPairing(null);
+            const c = info.controller ? { id: info.controller.id, name: info.controller.name } : null;
+            if (c?.id !== this.controller?.id) {
+                this.setController(c);
+                if (c) this.heartbeat?.seen();
+            }
+            if (c) {
+                if (this.pairing && !this.pairing.url) this.setPairing(null);
             } else if (!info.pairing || info.pairing.code !== this.pairing?.code) {
                 await this.regeneratePairing();
             }

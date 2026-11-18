@@ -53,7 +53,7 @@ test('E2E-18 revoking the controller from the display sends the phone to /pair',
     await displayPage.getByTestId('pairing-revoke').click();
     await displayPage.getByTestId('pairing-revoke').click();
     await expect(controllerPage.getByTestId('pair-view')).toBeVisible({ timeout: 10_000 });
-    await expect(controllerPage.getByTestId('pair-reason')).toContainText('disconnected this phone');
+    await expect(controllerPage.getByTestId('pair-reason')).toContainText('unpaired this phone');
 });
 
 test('unpair from the phone', async ({ displayPage, controllerPage }) => {

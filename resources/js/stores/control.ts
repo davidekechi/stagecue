@@ -26,6 +26,8 @@ export const useControlStore = defineStore('control', () => {
     const unpaired = ref<UnpairReason | null>(null);
     const drafts = shallowRef<Draft[]>([]);
     const conflict = shallowRef<Conflict | null>(null);
+    /** StageCue answers over HTTP (null = not known yet). */
+    const reachable = ref<boolean | null>(null);
     const form = ref<ControlForm>({ h: 0, m: 15, s: 0, text: '', durationMs: 10_000, corner: 'tr' });
     let runtime: ControllerRuntime | null = null;
 
@@ -39,6 +41,7 @@ export const useControlStore = defineStore('control', () => {
         onSession: (s) => (session.value = s),
         onUnpaired: (r) => (unpaired.value = r),
         onConflict: (c) => (conflict.value = c),
+        onReachable: (ok) => (reachable.value = ok),
     };
 
     function attach(rt: ControllerRuntime | null) {
@@ -62,6 +65,7 @@ export const useControlStore = defineStore('control', () => {
         unpaired,
         drafts,
         conflict,
+        reachable,
         form,
         canSend,
         blackout,

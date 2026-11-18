@@ -147,6 +147,7 @@ onBeforeUnmount(() => {
                         :pairing="store.pairing"
                         :controller="store.controller"
                         :connection="store.connection"
+                        :live-link="store.socketState === 'connected'"
                         @regenerate="store.regenerateCode()"
                         @revoke="store.revokeController()"
                     />

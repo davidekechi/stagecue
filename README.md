@@ -20,7 +20,7 @@ docker exec stagecue-pg psql -U stagecue -c 'CREATE DATABASE stagecue_test'
 composer install && npm install
 cp .env.example .env && php artisan key:generate   # set DB_PASSWORD=secret
 php artisan migrate
-composer run dev        # serve + vite + reverb + scheduler
+composer run dev        # app :8123 + vite + Reverb :8080 + scheduler — open http://127.0.0.1:8123
 ```
 
 ## Checks

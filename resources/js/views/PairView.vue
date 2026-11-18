@@ -13,10 +13,10 @@ const props = defineProps<{ api?: ApiClient }>();
 const router = useRouter();
 const route = useRoute();
 const REASONS: Record<string, string> = {
-    revoked: 'The display disconnected this phone. Pair again with the code on the screen.',
-    replaced: 'Another phone was paired with the display, so this one was disconnected.',
-    ended: 'The display ended its session. Pair again with the new code on the screen.',
-    left: 'This phone is no longer paired.',
+    revoked: 'The display unpaired this phone. To use it again, pair with the code on the screen.',
+    replaced: 'Another phone was paired with the display, so this one was unpaired.',
+    ended: 'The display ended its session, so this phone was unpaired. Pair again with the new code on the screen.',
+    left: 'This phone is unpaired.',
 };
 const reason = computed(() => REASONS[String(route.query.reason ?? '')] ?? null);
 const api = props.api ?? new ApiClient();
@@ -115,9 +115,9 @@ onBeforeUnmount(closeScanner);
             <p v-if="reason" class="rounded-2xl border border-standby/50 bg-standby/10 px-4 py-3 text-[0.95rem] leading-snug" role="status" data-testid="pair-reason">{{ reason }}</p>
 
             <div v-if="existing" class="rounded-2xl bg-panel p-4" data-testid="pair-existing">
-                <p class="text-[0.95rem]">This phone is already paired{{ existing.sessionName ? ` with ${existing.sessionName}` : '' }}.</p>
-                <RouterLink to="/control" class="mt-3 flex h-12 items-center justify-center rounded-xl bg-ink font-semibold text-desk">Open the controller</RouterLink>
-                <p class="mt-2 text-sm text-muted">Pairing again replaces that connection.</p>
+                <p class="text-[0.95rem]">This phone is paired with {{ existing.sessionName ?? 'a display' }}.</p>
+                <RouterLink to="/control" class="mt-3 flex h-14 items-center justify-center rounded-xl bg-ink text-lg font-semibold text-desk" data-testid="pair-reconnect">Reconnect to {{ existing.sessionName ?? 'the display' }}</RouterLink>
+                <p class="mt-2 text-sm text-muted">Pairing with a new code below replaces it.</p>
             </div>
 
             <form class="flex flex-col gap-5" @submit.prevent="canPair && submit({ code })">

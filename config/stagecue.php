@@ -6,8 +6,12 @@ return [
     'command_stale_ms' => (int) env('STAGECUE_COMMAND_STALE_MS', 10000),
     // `whisper` (D6 default) or `http` (fallback, LLD §6.4) — decided by spike T0.3.
     'heartbeat_mode' => env('STAGECUE_HEARTBEAT_MODE', 'whisper'),
-    'display_token_days' => 30,
-    'controller_token_days' => 7,
+    // A21: pairing persists until someone unpairs on purpose. Tokens slide on every use.
+    'display_token_days' => 90,
+    'controller_token_days' => 90,
+    'token_renew_within_days' => 14,
+    // A session nobody has used for this long is ended (then deleted 30 days later).
+    'session_idle_days' => 90,
     'snapshot_max_bytes' => 16384,
 
     // LLD §7.3 rate limits (per minute unless noted).

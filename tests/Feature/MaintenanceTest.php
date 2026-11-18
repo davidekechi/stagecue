@@ -20,21 +20,22 @@ it('BE-15 prune honours the retention rules', function () {
     logCommand($fresh, now()->subDays(8));
     logCommand($fresh, now()->subDays(6));
 
-    $idle = PresentationSession::factory()->create(['last_activity_at' => now()->subDays(8)]);
+    $quietWeek = PresentationSession::factory()->create(['last_activity_at' => now()->subDays(8)]);
+    $idle = PresentationSession::factory()->create(['last_activity_at' => now()->subDays(91)]);
     $oldEnded = Device::factory()->for(PresentationSession::factory()->ended()->state(['ended_at' => now()->subDays(31)]), 'session')->create();
     $oldEnded->createToken('display', ['display']);
     $recentEnded = PresentationSession::factory()->ended()->create(['ended_at' => now()->subDays(5)]);
-    $abandoned = PresentationSession::factory()->create(['last_activity_at' => now()->subDays(31)]);
+
     $fresh->createToken('controller', ['controller'], now()->subMinute()); // expired
 
     $this->artisan('sessions:prune')->assertSuccessful();
 
     expect(SessionCommand::count())->toBe(1)
         ->and($idle->fresh()->status)->toBe('ended')
+        ->and($quietWeek->fresh()->status)->toBe('active') // A21: a quiet week never unpairs
         ->and(PresentationSession::find($oldEnded->session_id))->toBeNull()
         ->and(Device::find($oldEnded->id))->toBeNull()
         ->and(PresentationSession::find($recentEnded->id))->not->toBeNull()
-        ->and(PresentationSession::find($abandoned->id))->toBeNull()
         ->and(PresentationSession::find($fresh->session_id))->not->toBeNull()
         ->and(PersonalAccessToken::count())->toBe(0);
 });

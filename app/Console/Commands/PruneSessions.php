@@ -21,16 +21,16 @@ class PruneSessions extends Command
     {
         $commands = SessionCommand::query()->where('relayed_at', '<', now()->subDays(7))->delete();
 
-        // No activity for 7 days → ended.
+        // No activity for 90 days → ended (A21: pairing is not broken by a quiet week).
         $ended = PresentationSession::query()
             ->where('status', PresentationSession::STATUS_ACTIVE)
-            ->where('last_activity_at', '<', now()->subDays(7))
+            ->where('last_activity_at', '<', now()->subDays((int) config('stagecue.session_idle_days')))
             ->update(['status' => PresentationSession::STATUS_ENDED, 'ended_at' => now(), 'pairing_code' => null, 'pairing_token_hash' => null, 'pairing_expires_at' => null]);
 
-        // Ended for 30 days, or untouched for 30 days → deleted (devices cascade; tokens are polymorphic, delete them first).
+        // Ended for 30 days → deleted (devices cascade; tokens are polymorphic, delete them first).
         $doomed = PresentationSession::query()
-            ->where(fn ($q) => $q->where('status', PresentationSession::STATUS_ENDED)->where('ended_at', '<', now()->subDays(30)))
-            ->orWhere('last_activity_at', '<', now()->subDays(30))
+            ->where('status', PresentationSession::STATUS_ENDED)
+            ->where('ended_at', '<', now()->subDays(30))
             ->pluck('id');
         $tokens = PersonalAccessToken::query()
             ->where('tokenable_type', Device::class)

@@ -181,3 +181,21 @@ describe('DisplaySession', () => {
         session.stop();
     });
 });
+
+describe('DisplaySession without the live channel (A22)', () => {
+    it('picks up a pair and an unpair over HTTP, no reload needed', async () => {
+        let controller: { id: string; name: string; pairedAt: number } | null = null;
+        const getSession = vi.fn(async (sid: string) => ({ session: { id: sid, displayName: 'TV', status: 'active' }, device: { id: 'D', role: 'display' }, controller, pairing: { code: 'ABC234', expiresAt: T0 + 600_000 }, realtime, serverTime: T0 }));
+        const intervals: Array<() => void> = [];
+        const ctx = await setup({ api: fakeApi({ getSession }) });
+        (ctx.session as unknown as { deps: { setInterval: (fn: () => void) => number } }).deps.setInterval = (fn: () => void) => (intervals.push(fn), intervals.length);
+        await ctx.session.start(); // the fake socket stays "connecting" — never connected
+        controller = { id: 'C9', name: 'Phone', pairedAt: T0 };
+        intervals.forEach((fn) => fn());
+        await vi.waitFor(() => expect(ctx.sink.onController).toHaveBeenLastCalledWith({ id: 'C9', name: 'Phone' }));
+        controller = null;
+        intervals.forEach((fn) => fn());
+        await vi.waitFor(() => expect(ctx.sink.onController).toHaveBeenLastCalledWith(null));
+        ctx.session.stop();
+    });
+});
