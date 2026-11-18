@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sessions\Resources;
+
+use App\Modules\Sessions\Models\Device;
+use App\Modules\Sessions\Models\PresentationSession;
+use App\Support\ClientConfig;
+
+/** JSON shapes for 04 §1.1–1.5. */
+final class SessionPayload
+{
+    /** @return array{id: string, displayName: string, status: string} */
+    public static function session(PresentationSession $s): array
+    {
+        return ['id' => $s->id, 'displayName' => $s->display_name, 'status' => $s->status];
+    }
+
+    /** @return array{id: string, role: string} */
+    public static function device(Device $d): array
+    {
+        return ['id' => $d->id, 'role' => $d->role];
+    }
+
+    /** GET /sessions/{sid} for either role. The plain pairing token is never stored, so only the code is shown. */
+    public static function show(PresentationSession $s, Device $viewer): array
+    {
+        $controller = $s->activeController;
+        $pairing = null;
+        if ($viewer->isDisplay() && $s->pairing_code !== null && $s->pairing_expires_at?->isFuture()) {
+            $pairing = ['code' => $s->pairing_code, 'expiresAt' => $s->pairing_expires_at->getTimestampMs()];
+        }
+
+        return [
+            'session' => self::session($s),
+            'device' => self::device($viewer),
+            'controller' => $controller ? ['id' => $controller->id, 'name' => $controller->name, 'pairedAt' => $controller->created_at?->getTimestampMs()] : null,
+            'pairing' => $pairing,
+            'realtime' => ClientConfig::realtime(),
+            'serverTime' => now()->getTimestampMs(),
+        ];
+    }
+}

@@ -48,3 +48,51 @@ function something()
 {
     // ..
 }
+
+/*
+|--------------------------------------------------------------------------
+| StageCue helpers
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Creates a Display session through the API.
+ *
+ * @return array{session: string, device: string, token: string, code: string, pairingToken: string, body: array<string, mixed>}
+ */
+function createDisplay(string $name = 'Main Hall TV'): array
+{
+    $body = test()->postJson('/api/sessions', ['displayName' => $name])->assertCreated()->json();
+    app('auth')->forgetGuards();
+
+    return [
+        'session' => $body['session']['id'],
+        'device' => $body['device']['id'],
+        'token' => $body['token'],
+        'code' => $body['pairing']['code'],
+        'pairingToken' => $body['pairing']['token'],
+        'body' => $body,
+    ];
+}
+
+/**
+ * Pairs a Controller to a display created with createDisplay().
+ *
+ * @param  array{code: string}  $display
+ * @return array{session: string, device: string, token: string, body: array<string, mixed>}
+ */
+function pairController(array $display, string $deviceName = 'Phone'): array
+{
+    $body = test()->postJson('/api/pairings', ['code' => $display['code'], 'deviceName' => $deviceName])->assertCreated()->json();
+    app('auth')->forgetGuards();
+
+    return ['session' => $body['session']['id'], 'device' => $body['device']['id'], 'token' => $body['token'], 'body' => $body];
+}
+
+/** Sends a request with a bearer token, resetting the guard so tokens never leak between calls. */
+function asDevice(string $token)
+{
+    app('auth')->forgetGuards();
+
+    return test()->withToken($token);
+}
