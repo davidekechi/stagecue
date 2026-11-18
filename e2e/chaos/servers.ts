@@ -20,6 +20,7 @@ export class ChaosServers {
             APP_URL: this.baseURL,
             DB_DATABASE: process.env.E2E_DB_DATABASE ?? 'stagecue_e2e',
             CACHE_PREFIX: 'stagecue-chaos-',
+            STAGECUE_VITE_HOT_FILE: 'storage/framework/e2e-no-hot',
             BROADCAST_CONNECTION: 'reverb',
             REVERB_APP_ID: 'stagecue-chaos',
             REVERB_APP_KEY: 'stagecue-chaos-key',

@@ -6,6 +6,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,12 @@ class AppServiceProvider extends ServiceProvider
     {
         if (! $this->app->environment(['local', 'testing'])) {
             URL::forceScheme('https');
+        }
+
+        // E2E points this elsewhere so it always tests the production build, even while a
+        // developer's Vite dev server is running.
+        if ($hot = env('STAGECUE_VITE_HOT_FILE')) {
+            Vite::useHotFile(base_path($hot));
         }
 
         $this->configureRateLimiting();

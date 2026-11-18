@@ -10,6 +10,8 @@ const serverEnv = {
     // Never share the developer's database or cache (rate-limit counters live there).
     DB_DATABASE: process.env.E2E_DB_DATABASE ?? 'stagecue_e2e',
     CACHE_PREFIX: 'stagecue-e2e-',
+    // Always the production build (and its CSP), even while a developer runs `npm run dev`.
+    STAGECUE_VITE_HOT_FILE: 'storage/framework/e2e-no-hot',
     BROADCAST_CONNECTION: 'reverb',
     REVERB_APP_ID: 'stagecue-e2e',
     REVERB_APP_KEY: 'stagecue-e2e-key',

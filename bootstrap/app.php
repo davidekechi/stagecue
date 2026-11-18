@@ -4,6 +4,7 @@ use App\Exceptions\ApiErrorRenderer;
 use App\Http\Middleware\AddServerTime;
 use App\Http\Middleware\EnsureDeviceAbility;
 use App\Http\Middleware\EnsureSessionMember;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withBroadcasting(__DIR__.'/../routes/channels.php', ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AddServerTime::class);
+        $middleware->append(SecurityHeaders::class);
         $middleware->trustProxies(at: '*');
         // Message text keeps its whitespace and line breaks (FR-M1).
         $middleware->trimStrings(except: ['payload.text']);
