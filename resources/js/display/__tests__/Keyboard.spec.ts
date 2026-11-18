@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createInitialState } from '@/core/reducer';
+import { apply, command, createInitialState } from '@/core/reducer';
+import { deriveView } from '@/core/view';
 import { installKeyboard, keyResolvers, spaceCommand, type KeyboardActions } from '../Keyboard';
 
 function setup(target: EventTarget = new EventTarget()) {
     let t = 0;
-    const actions: KeyboardActions = { toggleFullscreen: vi.fn(), toggleBlackout: vi.fn(), toggleClock: vi.fn(), startPause: vi.fn(), reset: vi.fn(), dismiss: vi.fn() };
+    const actions: KeyboardActions = { toggleFullscreen: vi.fn(), toggleBlackout: vi.fn(), toggleClock: vi.fn(), startPause: vi.fn(), reset: vi.fn(), dismiss: vi.fn(), oneSecond: vi.fn() };
     const dispose = installKeyboard(target as unknown as Window, actions, () => t);
     const press = (key: string, init: KeyboardEventInit = {}, at?: number) => {
         if (at !== undefined) t = at;
@@ -74,5 +75,36 @@ describe('Keyboard', () => {
         expect(keyResolvers.dismiss(s)).toBeNull();
         const msg = { status: 'showing' as const, id: 'm', text: 't', mode: 'persistent' as const, durationMs: null, shownAtWall: 0, expiresAtWall: null, corner: 'tr' as const };
         expect(keyResolvers.dismiss({ ...s, message: msg })).toEqual({ name: 'MESSAGE_DISMISS', payload: { id: 'm' } });
+    });
+
+    it('Tab sets 00:01 (Shift+Tab does nothing) and keeps focus where it is', () => {
+        const { actions, press } = setup();
+        const e = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
+        const target = new EventTarget();
+        const other = setup(target);
+        target.dispatchEvent(e);
+        expect(e.defaultPrevented).toBe(true);
+        expect(other.actions.oneSecond).toHaveBeenCalledTimes(1);
+        press('Tab', { shiftKey: true });
+        expect(actions.oneSecond).not.toHaveBeenCalled();
+    });
+
+    it('Tab → 00:01 from any timer state, and replaces the clock on the stage', () => {
+        const T = new Date(2026, 10, 18, 14, 45, 30).getTime();
+        let s = createInitialState('P', T);
+        s = { ...s, display: { blackout: false, clock: true } };
+        expect(deriveView(s, T).kind).toBe('clock');
+        for (const timer of [
+            { status: 'idle' as const },
+            { status: 'running' as const, durationMs: 600_000, endsAtWall: T + 300_000, startedAtWall: T - 300_000 },
+            { status: 'paused' as const, durationMs: 600_000, remainingMs: 42_000, pausedAtWall: T },
+        ]) {
+            const r = apply({ ...s, timer } as typeof s, command(keyResolvers.oneSecond().name, keyResolvers.oneSecond().payload), T);
+            expect(r.ok).toBe(true);
+            const next = (r as { state: typeof s }).state;
+            expect(next.timer).toEqual({ status: 'ready', durationMs: 1000 });
+            expect(deriveView(next, T)).toMatchObject({ kind: 'timer', text: '00:01' });
+            expect(next.display.clock).toBe(true); // clearing the timer brings the clock back
+        }
     });
 });

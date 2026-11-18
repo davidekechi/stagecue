@@ -11,7 +11,11 @@ export interface KeyboardActions {
     startPause(): void;
     reset(): void;
     dismiss(): void;
+    /** Tab: set the timer to 00:01 from any state (product owner request). */
+    oneSecond(): void;
 }
+
+export const ONE_SECOND_MS = 1_000;
 
 export const RESET_CONFIRM_MS = 1_000;
 
@@ -76,6 +80,11 @@ export function installKeyboard(target: Pick<Window, 'addEventListener' | 'remov
                 }
                 break;
             }
+            case 'Tab':
+                // Also keeps Tab from moving focus around the stage.
+                e.preventDefault();
+                if (!e.shiftKey) actions.oneSecond();
+                break;
             case 'd':
             case 'D':
                 e.preventDefault();
@@ -98,5 +107,6 @@ export const keyResolvers = {
         return name ? { name } : null;
     },
     reset: (s: PresentationState) => (s.timer.status === 'idle' ? null : { name: 'TIMER_RESET' as CommandName }),
+    oneSecond: () => ({ name: 'TIMER_SET' as CommandName, payload: { durationMs: ONE_SECOND_MS } }),
     dismiss: (s: PresentationState) => (s.message.status === 'showing' ? { name: 'MESSAGE_DISMISS' as CommandName, payload: { id: s.message.id } } : null),
 };

@@ -38,5 +38,6 @@ export function formatClock(epochMs: number): string {
     const d = new Date(epochMs);
     const h24 = d.getHours();
     const h = h24 % 12 === 0 ? 12 : h24 % 12;
-    return `${pad2(h)}:${pad2(d.getMinutes())} ${h24 < 12 ? 'AM' : 'PM'}`;
+    // Seconds show the clock is live (product owner request).
+    return `${pad2(h)}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())} ${h24 < 12 ? 'AM' : 'PM'}`;
 }

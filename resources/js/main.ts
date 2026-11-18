@@ -11,3 +11,6 @@ app.use(createAppRouter());
 app.mount('#app');
 
 window.addEventListener('load', () => void registerServiceWorker());
+
+// iOS Safari ignores `user-scalable=no` for pinch: stop pinch-zoom directly (double-tap is handled in CSS).
+for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (e) => e.preventDefault(), { passive: false });

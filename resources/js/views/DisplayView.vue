@@ -111,6 +111,7 @@ onMounted(async () => {
             startPause: () => void rt.localResolve(keyResolvers.startPause),
             reset: () => void rt.localResolve(keyResolvers.reset),
             dismiss: () => void rt.localResolve(keyResolvers.dismiss),
+            oneSecond: () => void rt.localResolve(keyResolvers.oneSecond),
         }),
     );
     for (const ev of ['pageshow', 'focus', 'online'] as const) window.addEventListener(ev, wake);
