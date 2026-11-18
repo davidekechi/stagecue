@@ -19,6 +19,10 @@ export const useDisplayStore = defineStore('display', () => {
     const _warnings = shallowRef<RuntimeWarnings>({ storageFailed: false, recoveredFromCorrupt: false });
     const fullscreen = ref(false);
     const wakeLock = ref<'active' | 'released' | 'unsupported'>('released');
+    /** `navigator.storage.persist()` result: null = API unavailable. */
+    const storagePersisted = ref<boolean | null>(null);
+    /** Result of the single-tab lock taken by the /display route guard. */
+    const lock = ref<'pending' | 'acquired' | 'busy' | 'unsupported'>('pending');
     let runtime: DisplayRuntime | null = null;
 
     const view = computed<View>(() => (_state.value ? deriveView(_state.value, _now.value) : { kind: 'standby' }));
@@ -53,6 +57,8 @@ export const useDisplayStore = defineStore('display', () => {
         view,
         fullscreen,
         wakeLock,
+        storagePersisted,
+        lock,
         sink,
         attach,
         localCommand,
