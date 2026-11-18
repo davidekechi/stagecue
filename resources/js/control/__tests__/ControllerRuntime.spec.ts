@@ -32,7 +32,7 @@ async function setup(api: Partial<Record<keyof ApiClient, unknown>> = {}) {
     const echo = new FakeEcho();
     let mono = 1_000;
     const timeouts: Array<{ fn: () => void; ms: number }> = [];
-    const sink: ControllerSink = { onMirror: vi.fn(), onOutbox: vi.fn(), onConnection: vi.fn(), onSession: vi.fn(), onUnpaired: vi.fn(), onSocket: vi.fn() };
+    const sink: ControllerSink = { onMirror: vi.fn(), onOutbox: vi.fn(), onConnection: vi.fn(), onSession: vi.fn(), onUnpaired: vi.fn(), onSocket: vi.fn(), onConflict: vi.fn() };
     const rt = new ControllerRuntime({
         api: fake,
         devices,
@@ -158,5 +158,26 @@ describe('ControllerRuntime', () => {
         await rt.start();
         expect(echo.channels.size).toBe(0); // no cached config yet in this fresh database
         rt.stop();
+    });
+});
+
+describe('ControllerRuntime STALE_VIEW', () => {
+    it('T8.2 refreshes the mirror, asks, and confirms with a NEW command against the new revision', async () => {
+        const { rt, sink, sent, channel } = await setup();
+        await rt.start();
+        channel().emit('.state', stateEvent(5));
+        const done = rt.send('TIMER_RESET', {});
+        await vi.waitFor(() => expect(sent).toHaveLength(1));
+        expect(sent[0]!.baseRevision).toBe(5);
+        channel().emit('.state', stateEvent(7, { acks: [{ commandId: sent[0]!.commandId, result: 'REJECTED', code: 'STALE_VIEW', message: 'The display changed. Confirm again?' }] }));
+        expect(await done).toBe('rejected');
+        await vi.waitFor(() => expect(sent.map((r) => r.name)).toEqual(['TIMER_RESET', 'SYNC_REQUEST']));
+        expect(sink.onConflict).toHaveBeenLastCalledWith({ name: 'TIMER_RESET', payload: {} });
+
+        void rt.confirmConflict({ name: 'TIMER_RESET', payload: {} });
+        await vi.waitFor(() => expect(sent).toHaveLength(3));
+        expect(sent[2]).toMatchObject({ name: 'TIMER_RESET', baseRevision: 7 });
+        expect(sent[2]!.commandId).not.toBe(sent[0]!.commandId);
+        expect(sink.onConflict).toHaveBeenLastCalledWith(null);
     });
 });

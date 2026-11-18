@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import type { CommandName, CommandPayloads, Corner } from '@/core/types';
-import type { ControllerRuntime, ControllerSink, UnpairReason } from '@/control/ControllerRuntime';
+import type { Conflict, ControllerRuntime, ControllerSink, UnpairReason } from '@/control/ControllerRuntime';
 import type { PendingCommand, Terminal } from '@/control/CommandOutbox';
 import type { Mirror } from '@/control/MirrorClock';
 import type { Draft } from '@/storage/db';
@@ -25,6 +25,7 @@ export const useControlStore = defineStore('control', () => {
     const session = ref<{ sessionName: string; deviceName: string } | null>(null);
     const unpaired = ref<UnpairReason | null>(null);
     const drafts = shallowRef<Draft[]>([]);
+    const conflict = shallowRef<Conflict | null>(null);
     const form = ref<ControlForm>({ h: 0, m: 15, s: 0, text: '', durationMs: 10_000, corner: 'tr' });
     let runtime: ControllerRuntime | null = null;
 
@@ -37,6 +38,7 @@ export const useControlStore = defineStore('control', () => {
         onConnection: (s) => (connection.value = s),
         onSession: (s) => (session.value = s),
         onUnpaired: (r) => (unpaired.value = r),
+        onConflict: (c) => (conflict.value = c),
     };
 
     function attach(rt: ControllerRuntime | null) {
@@ -59,6 +61,7 @@ export const useControlStore = defineStore('control', () => {
         session,
         unpaired,
         drafts,
+        conflict,
         form,
         canSend,
         blackout,
@@ -69,6 +72,8 @@ export const useControlStore = defineStore('control', () => {
         retry: (id: string) => runtime?.retry(id) ?? Promise.resolve('failed' as const),
         discard: (id: string) => runtime?.discard(id),
         unpair: () => runtime?.unpair() ?? Promise.resolve(),
+        confirmConflict: () => (conflict.value && runtime ? runtime.confirmConflict(conflict.value) : Promise.resolve('failed' as const)),
+        dismissConflict: () => (runtime ? runtime.dismissConflict() : (conflict.value = null)),
         runtime: () => runtime,
     };
 });

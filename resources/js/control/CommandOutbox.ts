@@ -22,6 +22,8 @@ export interface CommandOutboxDeps {
     post: (req: CommandRequest) => Promise<CommandResponse>;
     onChange: (entries: PendingCommand[]) => void;
     onAuthLoss?: (e: ApiError) => void;
+    /** Called once when an entry reaches a terminal state. */
+    onSettled?: (e: PendingCommand) => void;
     setTimeout?: (fn: () => void, ms: number) => unknown;
     clearTimeout?: (h: unknown) => void;
 }
@@ -114,7 +116,9 @@ export class CommandOutbox {
 
     private finish(e: PendingCommand, status: Terminal, code: string | null = null, message: string | null = null): void {
         this.clearTimer(e.commandId);
-        this.set({ ...e, status, code, message });
+        const settled = { ...e, status, code, message };
+        this.set(settled);
+        this.deps.onSettled?.(settled);
         for (const w of this.waiters.get(e.commandId) ?? []) w(status);
         this.waiters.delete(e.commandId);
         // Confirmed and rejected entries fade out; unconfirmed/failed wait for Retry or Discard.

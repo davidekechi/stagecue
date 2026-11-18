@@ -35,6 +35,8 @@ const duration = computed({
     get: () => ({ h: store.form.h, m: store.form.m, s: store.form.s }),
     set: (v) => Object.assign(store.form, v),
 });
+const CONFLICT_LABELS: Partial<Record<CommandName, string>> = { TIMER_SET: 'Set timer', TIMER_RESET: 'Reset', TIMER_CLEAR: 'Clear timer', PRESENTATION_NEW: 'New presentation' };
+const conflictLabel = computed(() => (store.conflict ? (CONFLICT_LABELS[store.conflict.name] ?? store.conflict.name) : ''));
 const timerStatus = computed(() => (store.mirror ? mirrorStateAt(store.mirror, mono.value).state.timer.status : null));
 const message = computed(() => (store.mirror && store.mirror.state.message.status === 'showing' ? store.mirror.state.message : null));
 const draftPayload = computed<MessageShowPayload | null>(() => {
@@ -189,6 +191,16 @@ onBeforeUnmount(() => {
                 @blackout="send('BLACKOUT_ON', {})"
                 @restore="send('BLACKOUT_OFF', {})"
             />
+        </div>
+
+        <div v-if="store.conflict" class="fixed inset-0 z-50 flex flex-col justify-end bg-black/70" data-testid="conflict-sheet">
+            <div class="flex flex-col gap-4 rounded-t-3xl border-t-2 border-standby bg-panel p-5 pb-8" role="alertdialog" aria-modal="true" aria-labelledby="conflict-h">
+                <h2 id="conflict-h" class="text-xl font-bold">The display changed</h2>
+                <p class="text-[0.95rem] leading-relaxed text-muted">Someone changed the timer since you last looked, so “{{ conflictLabel }}” wasn’t applied. Check the live view, then confirm again.</p>
+                <LiveMirror :mirror="store.mirror" :connected="store.connection.peer === 'connected'" />
+                <button type="button" class="h-14 rounded-xl bg-ink text-lg font-semibold text-desk" data-testid="conflict-confirm" @click="store.confirmConflict()">Confirm again</button>
+                <button type="button" class="h-12 rounded-xl border-2 border-panel-2 font-semibold" data-testid="conflict-cancel" @click="store.dismissConflict()">Cancel</button>
+            </div>
         </div>
 
         <PreviewSheet v-if="previewOpen" :mirror="store.mirror" :message="draftPayload" :can-send="store.canSend" @close="previewOpen = false" @send="sendMessage" />

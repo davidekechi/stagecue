@@ -22,6 +22,13 @@ export interface ControllerSink {
     onSession(info: { sessionName: string; deviceName: string }): void;
     onUnpaired(reason: UnpairReason): void;
     onSocket?(s: SocketState): void;
+    /** T8.2 — STALE_VIEW: the display changed under the operator; ask before re-sending. */
+    onConflict?(c: Conflict | null): void;
+}
+
+export interface Conflict {
+    name: CommandName;
+    payload: CommandRequest['payload'];
 }
 
 export interface ControllerRuntimeDeps {
@@ -61,6 +68,12 @@ export class ControllerRuntime {
             post: (req) => this.deps.api.sendCommand(this.creds!.sessionId, req),
             onChange: (e) => this.deps.sink.onOutbox(e),
             onAuthLoss: () => void this.lostPairing('revoked'),
+            onSettled: (e) => {
+                if (e.status === 'rejected' && e.code === 'STALE_VIEW') {
+                    void this.requestSync(); // refresh the mirror so the operator sees what changed
+                    this.deps.sink.onConflict?.({ name: e.name, payload: e.request.payload });
+                }
+            },
             setTimeout: deps.setTimeout,
             clearTimeout: deps.clearTimeout,
         });
@@ -130,6 +143,16 @@ export class ControllerRuntime {
         if (DESTRUCTIVE.has(name) && base === null) return Promise.resolve('rejected'); // needs a mirror (LLD §6.1)
         const req = makeCommand(name, payload, base, this.deps.wallNow?.() ?? Date.now()) as CommandRequest;
         return this.outbox.submit(req);
+    }
+
+    /** "Confirm again": a NEW command against the refreshed revision. */
+    confirmConflict(c: Conflict): Promise<Terminal> {
+        this.deps.sink.onConflict?.(null);
+        return this.send(c.name, c.payload as CommandPayloads[typeof c.name]);
+    }
+
+    dismissConflict(): void {
+        this.deps.sink.onConflict?.(null);
     }
 
     retry(commandId: string): Promise<Terminal> {
