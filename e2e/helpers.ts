@@ -39,3 +39,29 @@ export async function pairByApi(request: APIRequestContext, code: string, device
         state: async () => (await (await request.get(`/api/sessions/${sid}/state`, { headers: auth })).json()) as { snapshot: { revision: number; state: Record<string, unknown> } | null },
     };
 }
+
+/** Pairs the phone UI with the code shown on the Display and waits for "Display connected". */
+export async function pairPhone(phone: Page, code: string, name = 'Test phone') {
+    await phone.goto('/pair');
+    await phone.getByTestId('pair-name').fill(name);
+    await phone.getByTestId('pair-code').fill(code);
+    await expect(phone.getByTestId('control-view')).toBeVisible({ timeout: 10_000 });
+    await expect(phone.getByTestId('badge-peer')).toHaveAttribute('data-state', 'connected', { timeout: 15_000 });
+}
+
+/** mm:ss / h:mm:ss / +hh:mm:ss → seconds. */
+export function seconds(text: string): number {
+    return text.trim().replace('+', '').split(/\s/)[0]!.split(':').map(Number).reduce((a, b) => a * 60 + b, 0);
+}
+
+/** Holds the Black screen control for 800 ms. */
+export async function holdBlackout(phone: Page) {
+    const box = (await phone.getByTestId('hold-blackout').boundingBox())!;
+    await phone.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await phone.mouse.down();
+    await phone.waitForTimeout(800);
+    await phone.mouse.up();
+}
+
+export const displayRevision = (display: Page) =>
+    display.evaluate(() => (window as unknown as { __stagecue: { runtime: { state: { revision: number } } } }).__stagecue.runtime.state.revision);

@@ -1,14 +1,5 @@
 import { test, expect } from './fixtures';
-import { openDisplay } from './helpers';
-import type { Page } from '@playwright/test';
-
-async function pairPhone(phone: Page, code: string, name = 'Test phone') {
-    await phone.goto('/pair');
-    await phone.getByTestId('pair-name').fill(name);
-    await phone.getByTestId('pair-code').fill(code);
-    await expect(phone.getByTestId('control-view')).toBeVisible({ timeout: 10_000 });
-    await expect(phone.getByTestId('badge-peer')).toHaveAttribute('data-state', 'connected', { timeout: 15_000 });
-}
+import { holdBlackout, openDisplay, pairPhone } from './helpers';
 
 test('E2E-01/02/04 pair by code, display the timer, start it, send a message', async ({ displayPage, controllerPage }) => {
     const code = await openDisplay(displayPage);
@@ -49,11 +40,7 @@ test('E2E-11 hold for black screen, then restore', async ({ displayPage, control
     await controllerPage.waitForTimeout(800);
     await expect(displayPage.getByTestId('stage-black')).toHaveCount(0);
     // A 600 ms hold is.
-    const box = (await hold.boundingBox())!;
-    await controllerPage.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await controllerPage.mouse.down();
-    await controllerPage.waitForTimeout(800);
-    await controllerPage.mouse.up();
+    await holdBlackout(controllerPage);
     await expect(displayPage.getByTestId('stage-black')).toBeVisible({ timeout: 5_000 });
     await expect(controllerPage.getByTestId('mirror-blackout')).toBeVisible();
     await controllerPage.getByTestId('restore').click();
