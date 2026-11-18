@@ -7,15 +7,11 @@ export type Placement = 'center' | 'overtime' | Corner;
 
 /** Target height of the digits as a share of the stage height (full-size timer). */
 export const DIGIT_HEIGHT_RATIO = 0.7;
-/** DM Sans' figure height as a share of the font size (wght 800). */
-export const DIGIT_CAP_RATIO = 0.712;
 /**
- * DM Sans has no condensed width, so its bold digits run out of WIDTH on a 16:9 screen long
- * before 70% height ("15:00" ≈ 38%). The full-size timer is stretched vertically to make the
- * digits tall — up to this factor, which puts "15:00" at ~70% and "1:00:00" at ~55% of a
- * 16:9 stage.
+ * League Gothic's figure height as a share of the font size. Its digits are about twice as tall
+ * as they are wide, so "15:00" reaches 70% of a 16:9 stage at its natural proportions.
  */
-export const MAX_STRETCH = 1.95;
+export const DIGIT_CAP_RATIO = 0.743;
 /** The full-size timer may use this share of the stage width (5% safe area each side). */
 export const WIDTH_RATIO = 0.9;
 /** Compact (corner) timer: box height as a share of the stage height. */
@@ -32,13 +28,6 @@ export function fitFontSize(W: number, H: number, widthPerEm: number): number {
     const byHeight = (DIGIT_HEIGHT_RATIO * H) / DIGIT_CAP_RATIO;
     if (!(widthPerEm > 0)) return byHeight;
     return Math.min(byHeight, (WIDTH_RATIO * W) / widthPerEm);
-}
-
-/** Vertical stretch for the full-size timer so the digits approach 70% of the height (capped). */
-export function stretchFor(H: number, fontPx: number | null, placement: Placement): number {
-    if (placement !== 'center' || !fontPx || H <= 0) return 1;
-    const digits = fontPx * DIGIT_CAP_RATIO;
-    return Math.round(Math.min(MAX_STRETCH, Math.max(1, (DIGIT_HEIGHT_RATIO * H) / digits)) * 1000) / 1000;
 }
 
 /**
@@ -71,7 +60,6 @@ export const textShape = (text: string) => text.replace(/\d/g, '0');
 export function useTimerTransform(stage: Ref<HTMLElement | null>, timer: Ref<HTMLElement | null>, placement: Ref<Placement>, shape: Ref<string>) {
     const transform = ref(computeTransform(0, 0, 0, 0, 'center'));
     const fontPx = ref<number | null>(null);
-    const stretch = ref(1);
     const size = { W: 0, H: 0, w: 0, h: 0 };
     let observer: ResizeObserver | null = null;
 
@@ -88,13 +76,15 @@ export function useTimerTransform(stage: Ref<HTMLElement | null>, timer: Ref<HTM
             size.h = t.offsetHeight;
         }
         if (size.W > 0 && size.H > 0) {
-            const current = fontPx.value ?? (t ? parseFloat(getComputedStyle(t).fontSize) : 0);
-            const perEm = current > 0 && size.w > 0 ? size.w / current : 0;
+            const cs = t ? getComputedStyle(t) : null;
+            const current = fontPx.value ?? (cs ? parseFloat(cs.fontSize) : 0);
+            // Fit the TEXT, not the box: the side padding only matters for the corner pill.
+            const pad = cs ? (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) : 0;
+            const perEm = current > 0 && size.w > pad ? (size.w - pad) / current : 0;
             const next = fitFontSize(size.W, size.H, perEm);
             if (fontPx.value === null || Math.abs(next - fontPx.value) > 0.5) fontPx.value = next; // → resize → measure again
         }
         transform.value = computeTransform(size.W, size.H, size.w, size.h, placement.value);
-        stretch.value = stretchFor(size.H, fontPx.value, placement.value);
     };
 
     onMounted(() => {
@@ -115,5 +105,5 @@ export function useTimerTransform(stage: Ref<HTMLElement | null>, timer: Ref<HTM
     // A new format (e.g. 59:59 → 1:00:00 or overtime) has a new width: refit.
     watch(shape, () => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(measure) : measure()));
 
-    return { transform, fontPx, stretch, measure };
+    return { transform, fontPx, measure };
 }

@@ -27,9 +27,10 @@ defineProps<{ active: boolean; paused: boolean }>();
     top: 9%;
     margin: 0;
     text-align: center;
-    /* "TIME UP!" is 3.84 em wide in DM Sans 800 → 90% of the width = 23.4cqw. */
-    font-size: min(46cqh, 23.4cqw);
-    font-weight: 800;
+    /* League Gothic: "TIME UP!" is 2.38 em wide → 90% of the width = 37.8cqw. */
+    font-size: min(46cqh, 37.8cqw);
+    font-weight: 400;
+    letter-spacing: 0.01em;
     letter-spacing: 0;
     line-height: 1;
     white-space: nowrap;

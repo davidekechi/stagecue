@@ -6,10 +6,23 @@
 /* Self-hosted variable fonts (latin subsets) — they must work offline, so no font CDN.
    `block` avoids a flash of fallback digits on the stage. */
 @font-face {
-    /* Everything: the Display stage and the Controller. Axes: wght 100–1000, opsz 9–40. */
-    font-family: 'DM Sans';
+    /* The Display stage: timer, clock, messages, TIME UP. Tall by design (digits are ~2× as tall as
+       they are wide), so the timer fills the screen with no distortion. One weight; axis wdth 75–100. */
+    font-family: 'League Gothic';
     font-style: normal;
     font-display: block; /* no flash of fallback digits on the stage */
+    font-weight: 400;
+    font-stretch: 75% 100%;
+    src: url('../fonts/LeagueGothic-latin.woff2') format('woff2-variations'),
+        url('../fonts/LeagueGothic-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+        U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    /* The Controller, the setup panel and all interface text. Axes: wght 100–1000, opsz 9–40. */
+    font-family: 'DM Sans';
+    font-style: normal;
+    font-display: swap;
     font-weight: 100 1000;
     src: url('../fonts/DMSans-latin.woff2') format('woff2-variations'),
         url('../fonts/DMSans-latin.woff2') format('woff2');
@@ -19,7 +32,7 @@
 
 @theme {
     --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-    --font-stage: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-stage: 'League Gothic', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
     --color-overtime: #c8102e;
 
     /* Controller: a stage manager's cue desk. Colour carries status only (cue lights). */

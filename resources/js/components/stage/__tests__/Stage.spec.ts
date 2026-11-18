@@ -4,7 +4,7 @@ import { nextTick } from 'vue';
 import Stage from '../Stage.vue';
 import StageTimer from '../StageTimer.vue';
 import StageOvertime from '../StageOvertime.vue';
-import { COMPACT_HEIGHT_RATIO, computeTransform, DIGIT_CAP_RATIO, DIGIT_HEIGHT_RATIO, fitFontSize, MAX_STRETCH, OVERTIME_CENTER_RATIO, OVERTIME_HEIGHT_RATIO, stretchFor, textShape } from '../useTimerTransform';
+import { COMPACT_HEIGHT_RATIO, computeTransform, DIGIT_CAP_RATIO, DIGIT_HEIGHT_RATIO, fitFontSize, OVERTIME_CENTER_RATIO, OVERTIME_HEIGHT_RATIO, textShape } from '../useTimerTransform';
 import type { View } from '@/core/view';
 
 const timerView: View = { kind: 'timer', text: '15:00', paused: false, overtime: false };
@@ -104,21 +104,15 @@ describe('timer fills the stage', () => {
     it('digits reach 70% of the height when the width allows, otherwise fill the safe width', () => {
         // A narrow readout (e.g. "5") on 16:9 is height-bound: digits = 70% of H.
         expect(fitFontSize(1920, 1080, 0.6) * DIGIT_CAP_RATIO).toBeCloseTo(DIGIT_HEIGHT_RATIO * 1080, 5);
-        // "15:00" (~2.9 em wide) on 16:9 is width-bound: it spans 90% of the width.
-        expect(fitFontSize(1920, 1080, 2.9) * 2.9).toBeCloseTo(0.9 * 1920, 5);
+        // A wide readout ("1:00:00" ≈ 2.17 em) on 16:9 is width-bound: it spans 90% of the width.
+        expect(fitFontSize(1920, 1080, 2.17) * 2.17).toBeCloseTo(0.9 * 1920, 5);
         // Unknown width → height-bound.
         expect(fitFontSize(1024, 768, 0) * DIGIT_CAP_RATIO).toBeCloseTo(DIGIT_HEIGHT_RATIO * 768, 5);
     });
 
-    it('stretches width-bound digits toward 70% height, capped, and only at full size', () => {
-        const H = 1080;
-        const widthBoundFont = 900; // digits = 900 × 0.673 ≈ 56% of H
-        const s = stretchFor(H, widthBoundFont, 'center');
-        expect(s * widthBoundFont * DIGIT_CAP_RATIO).toBeCloseTo(DIGIT_HEIGHT_RATIO * H, 0);
-        expect(stretchFor(H, 500, 'center')).toBe(MAX_STRETCH); // a long readout is never distorted further
-        expect(stretchFor(H, fitFontSize(1920, H, 0), 'center')).toBe(1); // already 70%: no stretch
-        for (const p of ['tl', 'br', 'overtime'] as const) expect(stretchFor(H, 500, p)).toBe(1);
-        expect(stretchFor(H, null, 'center')).toBe(1);
+    it('"15:00" in League Gothic reaches 70% of a 16:9 stage at natural proportions', () => {
+        const widthPerEm = 4 * 0.363 + 0.177; // four digit slots + colon
+        expect(fitFontSize(1920, 1080, widthPerEm) * DIGIT_CAP_RATIO).toBeCloseTo(0.7 * 1080, 0);
     });
 
     it('refits only when the readout format changes, never every second', () => {

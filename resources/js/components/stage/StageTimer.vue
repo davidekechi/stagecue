@@ -12,8 +12,8 @@ const props = defineProps<{
 
 const el = ref<HTMLElement | null>(null);
 const shape = computed(() => textShape(props.text));
-const { transform, fontPx, stretch } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'), shape);
-/** DM Sans has no tabular figures: each digit gets a fixed-width slot so the readout never wobbles. */
+const { transform, fontPx } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'), shape);
+/** League Gothic has no tabular figures: each digit gets a fixed-width slot so the readout never wobbles. */
 const chars = computed(() => [...props.text].map((c) => ({ c, digit: c >= '0' && c <= '9' })));
 const compact = computed(() => props.placement !== 'center' && props.placement !== 'overtime');
 const moving = ref(false);
@@ -38,7 +38,7 @@ defineExpose({ el });
         @transitionend="moving = false"
         @transitioncancel="moving = false"
     >
-        <span class="digits" :style="{ transform: `scaleY(${stretch})` }"><span v-for="(ch, i) in chars" :key="i" :class="{ cell: ch.digit }">{{ ch.c }}</span></span>
+        <span v-for="(ch, i) in chars" :key="i" :class="{ cell: ch.digit }">{{ ch.c }}</span>
     </div>
 </template>
 
@@ -53,10 +53,10 @@ defineExpose({ el });
     border-radius: 0.14em;
     /* Until the first measurement: a safe size that fits a 16:9 or 4:3 stage. */
     font-size: min(60cqh, 30cqw);
-    /* Tall and bold: DM Sans 800, stretched vertically at full size (see MAX_STRETCH). */
-    font-weight: 800;
+    /* Tall by design: League Gothic, natural proportions (no stretching). */
+    font-weight: 400;
     line-height: 1;
-    letter-spacing: 0;
+    letter-spacing: 0.01em;
     white-space: nowrap;
     color: var(--stage-fg);
     transform-origin: center;
@@ -65,14 +65,9 @@ defineExpose({ el });
         transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1),
         background-color 400ms ease;
 }
-.digits {
-    display: inline-block;
-    transform-origin: center;
-    transition: transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
 .cell {
     display: inline-block;
-    width: 0.7em; /* the widest DM Sans 800 figure is 0.695 em */
+    width: 0.37em; /* the widest League Gothic figure is 0.363 em */
     text-align: center;
 }
 .stage-timer.is-moving {
@@ -87,8 +82,7 @@ defineExpose({ el });
     background: var(--overtime-bg);
 }
 @media (prefers-reduced-motion: reduce) {
-    .stage-timer,
-    .digits {
+    .stage-timer {
         transition-duration: 0ms;
     }
 }
