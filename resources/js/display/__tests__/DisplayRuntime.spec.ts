@@ -262,3 +262,17 @@ describe('DisplayRuntime (local mode)', () => {
         rt.stop();
     });
 });
+
+describe('DisplayRuntime.localResolve', () => {
+    it('decides inside the queue, so rapid toggles see each other', async () => {
+        const clock = new FakeClock(T0);
+        const { rt } = await makeRuntime(clock);
+        await rt.boot();
+        const toggle = (s: PresentationState) => ({ name: (s.display.blackout ? 'BLACKOUT_OFF' : 'BLACKOUT_ON') as 'BLACKOUT_ON' | 'BLACKOUT_OFF' });
+        await Promise.all([rt.localResolve(toggle), rt.localResolve(toggle), rt.localResolve(toggle)]);
+        expect(rt.state.display.blackout).toBe(true);
+        expect(rt.state.revision).toBe(3);
+        expect(await rt.localResolve(() => null)).toBeNull();
+        rt.stop();
+    });
+});

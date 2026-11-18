@@ -157,6 +157,19 @@ export class DisplayRuntime {
         return this.queue.run(() => this.applyAndCommit(action, this.reconciler.nowEff()));
     }
 
+    /**
+     * A local command decided against the state at the moment it runs (inside the queue), so rapid
+     * toggles (B, Space) never act on a stale state. Returns null when the resolver declines.
+     */
+    localResolve(resolve: (state: PresentationState) => { name: CommandName; payload?: unknown } | null): Promise<ApplyResult | null> {
+        return this.queue.run(async () => {
+            const cmd = resolve(this._state);
+            if (!cmd) return null;
+            const action: Action = { kind: 'command', name: cmd.name, payload: cmd.payload ?? {}, commandId: uuidv7(), baseRevision: null };
+            return this.applyAndCommit(action, this.reconciler.nowEff());
+        });
+    }
+
     /** Called by the TickLoop. Reconciles clocks, raises due internal events, updates `now`. */
     tick(): void {
         const sample = this.reconciler.sample();
