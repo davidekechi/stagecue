@@ -19,17 +19,19 @@ defineProps<{ active: boolean; paused: boolean }>();
     background: var(--overtime-bg);
     color: #fff;
 }
+/* As wide as the safe area allows; the counter sits below at ~70% height. */
 .time-up {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 16%;
+    left: var(--safe);
+    right: var(--safe);
+    top: 15%;
     margin: 0;
     text-align: center;
-    font-size: 17cqh;
+    font-size: min(42cqh, 17.5cqw);
     font-weight: 900;
-    letter-spacing: 0.02em;
+    letter-spacing: -0.01em;
     line-height: 1;
+    white-space: nowrap;
 }
 .paused-label {
     position: absolute;

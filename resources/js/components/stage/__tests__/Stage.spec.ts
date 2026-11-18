@@ -4,7 +4,7 @@ import { nextTick } from 'vue';
 import Stage from '../Stage.vue';
 import StageTimer from '../StageTimer.vue';
 import StageOvertime from '../StageOvertime.vue';
-import { computeTransform } from '../useTimerTransform';
+import { COMPACT_HEIGHT_RATIO, computeTransform, DIGIT_CAP_RATIO, DIGIT_HEIGHT_RATIO, fitFontSize, OVERTIME_CENTER_RATIO, OVERTIME_HEIGHT_RATIO, textShape } from '../useTimerTransform';
 import type { View } from '@/core/view';
 
 const timerView: View = { kind: 'timer', text: '15:00', paused: false, overtime: false };
@@ -72,18 +72,23 @@ describe('Stage', () => {
 });
 
 describe('StageTimer', () => {
-    it('CMP-01 renders the text with tabular numerals and a paused indicator', () => {
+    it('CMP-01 renders the text with tabular numerals; the stage shows the paused bars for ready/paused', () => {
         const w = mount(StageTimer, { props: { text: '15:00', placement: 'center', overtime: false, paused: true, stage: null } });
-        expect(w.text()).toContain('15:00');
+        expect(w.text()).toBe('15:00');
         expect(w.classes()).toContain('tabular');
-        expect(w.find('[data-testid="paused-indicator"]').exists()).toBe(true);
         expect(w.attributes('aria-label')).toBe('15:00, paused');
+        const stage = mount(Stage, { props: { view: { kind: 'timer', text: '15:00', paused: true, overtime: false } } });
+        expect(stage.find('[data-testid="paused-indicator"]').exists()).toBe(true);
+        const running = mount(Stage, { props: { view: timerView } });
+        expect(running.find('[data-testid="paused-indicator"]').exists()).toBe(false);
     });
 
-    it('hides the paused indicator when compact, and uses the red pill in compact overtime', () => {
-        const w = mount(StageTimer, { props: { text: '+00:00:05', placement: 'tr', overtime: true, paused: true, stage: null } });
-        expect(w.find('[data-testid="paused-indicator"]').exists()).toBe(false);
-        expect(w.classes()).toContain('is-pill');
+    it('uses a black pill in a corner and a red one in overtime', () => {
+        const black = mount(StageTimer, { props: { text: '10:00', placement: 'tr', overtime: false, paused: false, stage: null } });
+        expect(black.classes()).toContain('is-pill');
+        expect(black.classes()).not.toContain('is-red');
+        const red = mount(StageTimer, { props: { text: '+00:00:05', placement: 'tr', overtime: true, paused: true, stage: null } });
+        expect(red.classes()).toContain('is-red');
     });
 
     it('toggles will-change only while transitioning', async () => {
@@ -95,26 +100,44 @@ describe('StageTimer', () => {
     });
 });
 
+describe('timer fills the stage', () => {
+    it('digits reach 70% of the height when the width allows, otherwise fill the safe width', () => {
+        // A narrow readout (e.g. "5") on 16:9 is height-bound: digits = 70% of H.
+        expect(fitFontSize(1920, 1080, 0.6) * DIGIT_CAP_RATIO).toBeCloseTo(DIGIT_HEIGHT_RATIO * 1080, 5);
+        // "15:00" (~2.9 em wide) on 16:9 is width-bound: it spans 90% of the width.
+        expect(fitFontSize(1920, 1080, 2.9) * 2.9).toBeCloseTo(0.9 * 1920, 5);
+        // Unknown width → height-bound.
+        expect(fitFontSize(1024, 768, 0) * DIGIT_CAP_RATIO).toBeCloseTo(DIGIT_HEIGHT_RATIO * 768, 5);
+    });
+
+    it('refits only when the readout format changes, never every second', () => {
+        expect(textShape('14:59')).toBe(textShape('03:12'));
+        expect(textShape('59:59')).not.toBe(textShape('1:00:00'));
+    });
+});
+
 describe('CMP-05 timer transforms', () => {
-    const k = 0.28;
+    const parse = (t: string) => t.match(/translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/)!.slice(1).map(Number) as [number, number, number];
+
     it.each([
         [1920, 1080],
         [1024, 768],
     ])('places the compact timer in each corner at %ix%i', (W, H) => {
-        const w = 600;
-        const h = 240;
+        const w = 1500; // the full-size box (large)
+        const h = 520;
+        const k = (COMPACT_HEIGHT_RATIO * H) / h;
         const m = 0.04 * Math.min(W, H);
-        const x = W / 2 - m - (k * w) / 2;
-        const y = H / 2 - m - (k * h) / 2;
-        const parse = (t: string) => t.match(/translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/)!.slice(1).map(Number);
-        expect(parse(computeTransform(W, H, w, h, 'tl'))).toEqual([round(-x), round(-y), k]);
-        expect(parse(computeTransform(W, H, w, h, 'tr'))).toEqual([round(x), round(-y), k]);
-        expect(parse(computeTransform(W, H, w, h, 'bl'))).toEqual([round(-x), round(y), k]);
-        expect(parse(computeTransform(W, H, w, h, 'br'))).toEqual([round(x), round(y), k]);
+        for (const [corner, sx, sy] of [['tl', -1, -1], ['tr', 1, -1], ['bl', -1, 1], ['br', 1, 1]] as const) {
+            const [dx, dy, scale] = parse(computeTransform(W, H, w, h, corner));
+            expect(scale).toBeCloseTo(k, 3);
+            expect(scale * h).toBeCloseTo(COMPACT_HEIGHT_RATIO * H, 0); // a fixed share of the stage
+            // The scaled box sits inside the stage with margin m.
+            const left = W / 2 + dx - (scale * w) / 2;
+            const top = H / 2 + dy - (scale * h) / 2;
+            expect(sx < 0 ? left : W - (left + scale * w)).toBeCloseTo(m, 0);
+            expect(sy < 0 ? top : H - (top + scale * h)).toBeCloseTo(m, 0);
+        }
         expect(computeTransform(W, H, w, h, 'center')).toBe('translate(-50%, -50%) translate(0px, 0px) scale(1)');
-        // The scaled box stays inside the stage with margin m.
-        const left = W / 2 - x - (k * w) / 2;
-        expect(left).toBeCloseTo(m, 5);
     });
 
     it('sets --timer-transform on the element from the measured sizes', async () => {
@@ -123,12 +146,15 @@ describe('CMP-05 timer transforms', () => {
         Object.defineProperty(stage, 'clientHeight', { value: 1080 });
         const w = mount(StageTimer, { props: { text: '15:00', placement: 'center', overtime: false, paused: false, stage } });
         await w.setProps({ placement: 'br' });
-        const style = (w.element as HTMLElement).style.getPropertyValue('--timer-transform');
-        expect(style).toMatch(/^translate\(-50%, -50%\) translate\([\d.]+px, [\d.]+px\) scale\(0.28\)$/);
+        expect((w.element as HTMLElement).style.getPropertyValue('--timer-transform')).toMatch(/^translate\(-50%, -50%\) translate\([\d.]+px, [\d.]+px\) scale\([\d.]+\)$/);
+        expect((w.element as HTMLElement).style.fontSize).toMatch(/px$/);
     });
 
-    it('the full overtime placement sits below the TIME UP! heading', () => {
-        expect(computeTransform(1920, 1080, 600, 240, 'overtime')).toBe('translate(-50%, -50%) translate(0px, 151.2px) scale(0.8)');
+    it('the full overtime counter is a fixed share of the stage, below the TIME UP! heading', () => {
+        const [dx, dy, scale] = parse(computeTransform(1920, 1080, 1700, 400, 'overtime'));
+        expect(dx).toBe(0);
+        expect(dy).toBeCloseTo((OVERTIME_CENTER_RATIO - 0.5) * 1080, 1);
+        expect(scale * 400).toBeCloseTo(OVERTIME_HEIGHT_RATIO * 1080, 0);
     });
 });
 
@@ -143,7 +169,3 @@ describe('StageOvertime', () => {
         expect(stage.find('[data-testid="stage-timer"]').attributes('data-overtime')).toBe('true');
     });
 });
-
-function round(n: number) {
-    return Math.round(n * 100) / 100;
-}

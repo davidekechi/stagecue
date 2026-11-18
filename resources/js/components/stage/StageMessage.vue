@@ -16,7 +16,7 @@ defineProps<{ message: { text: string; corner: Corner } | null; hasCompactTimer:
             role="status"
             aria-live="polite"
         >
-            <FitText :text="message.text" />
+            <FitText :text="message.text" :max-ratio="0.75" />
         </div>
     </Transition>
 </template>
@@ -27,13 +27,13 @@ defineProps<{ message: { text: string; corner: Corner } | null; hasCompactTimer:
     position: absolute;
     inset: var(--safe);
     z-index: 10;
-    color: var(--stage-fg);
+    color: #000; /* black text on the white message stage */
 }
 .stage-message[data-reserve='true'][data-corner^='t'] {
-    top: calc(var(--safe) + 9cqh);
+    top: calc(var(--safe) + 13cqh);
 }
 .stage-message[data-reserve='true'][data-corner^='b'] {
-    bottom: calc(var(--safe) + 9cqh);
+    bottom: calc(var(--safe) + 13cqh);
 }
 .msg-enter-active,
 .msg-leave-active {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, toRef } from 'vue';
-import { useTimerTransform, type Placement } from './useTimerTransform';
+import { textShape, useTimerTransform, type Placement } from './useTimerTransform';
 
 const props = defineProps<{
     text: string;
@@ -11,7 +11,8 @@ const props = defineProps<{
 }>();
 
 const el = ref<HTMLElement | null>(null);
-const { transform } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'));
+const shape = computed(() => textShape(props.text));
+const { transform, fontPx } = useTimerTransform(toRef(props, 'stage'), el, toRef(props, 'placement'), shape);
 const compact = computed(() => props.placement !== 'center' && props.placement !== 'overtime');
 const moving = ref(false);
 
@@ -27,16 +28,15 @@ defineExpose({ el });
         :data-compact="compact"
         :data-overtime="overtime"
         :data-paused="paused"
-        :class="{ 'is-moving': moving, 'is-pill': compact && overtime }"
-        :style="{ '--timer-transform': transform }"
+        :class="{ 'is-moving': moving, 'is-pill': compact, 'is-red': compact && overtime }"
+        :style="{ '--timer-transform': transform, fontSize: fontPx ? `${fontPx}px` : undefined }"
         role="timer"
         :aria-label="paused ? `${text}, paused` : text"
         @transitionstart="moving = true"
         @transitionend="moving = false"
         @transitioncancel="moving = false"
     >
-        <span class="digits">{{ text }}</span>
-        <span v-if="paused && !compact" class="paused" data-testid="paused-indicator" aria-hidden="true"><i></i><i></i></span>
+        {{ text }}
     </div>
 </template>
 
@@ -46,15 +46,14 @@ defineExpose({ el });
     left: 50%;
     top: 50%;
     z-index: 20;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0 0.12em;
-    border-radius: 0.18em;
-    font-size: 22cqh;
+    /* Same padding in every placement, so moving to a corner never refits the font mid-animation. */
+    padding: 0.04em 0.16em;
+    border-radius: 0.14em;
+    /* Until the first measurement: a safe size that fits a 16:9 or 4:3 stage. */
+    font-size: min(60cqh, 30cqw);
     font-weight: 700;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
     white-space: nowrap;
     color: var(--stage-fg);
     transform-origin: center;
@@ -66,24 +65,13 @@ defineExpose({ el });
 .stage-timer.is-moving {
     will-change: transform;
 }
+/* In a corner the timer sits on the white message stage: a black pill, red in overtime. */
 .stage-timer.is-pill {
+    background: #000;
+    color: #fff;
+}
+.stage-timer.is-red {
     background: var(--overtime-bg);
-}
-.digits {
-    display: block;
-}
-.paused {
-    display: flex;
-    gap: 0.06em;
-    margin-top: 0.12em;
-    opacity: 0.55;
-}
-.paused i {
-    display: block;
-    width: 0.06em;
-    height: 0.2em;
-    background: currentColor;
-    border-radius: 0.02em;
 }
 @media (prefers-reduced-motion: reduce) {
     .stage-timer {
