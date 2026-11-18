@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AddServerTime::class);
         $middleware->trustProxies(at: '*');
+        // Message text keeps its whitespace and line breaks (FR-M1).
+        $middleware->trimStrings(except: ['payload.text']);
         $middleware->alias([
             'session.member' => EnsureSessionMember::class,
             'ability' => EnsureDeviceAbility::class,

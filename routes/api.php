@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pairing\Controllers\PairingController;
+use App\Modules\Relay\Controllers\CommandController;
 use App\Modules\Sessions\Controllers\SessionController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,4 +16,5 @@ Route::middleware(['auth:sanctum', 'session.member'])->prefix('/sessions/{sessio
     Route::post('/pairing/regenerate', [PairingController::class, 'regenerate'])->middleware('ability:display');
     Route::delete('/controller', [PairingController::class, 'revoke'])->middleware('ability:display');
     Route::delete('/controller/self', [PairingController::class, 'leave'])->middleware('ability:controller');
+    Route::post('/commands', [CommandController::class, 'store'])->middleware(['ability:controller', 'throttle:commands']);
 });
