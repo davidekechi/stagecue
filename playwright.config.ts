@@ -1,8 +1,26 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const APP_PORT = Number(process.env.E2E_APP_PORT ?? 8123);
-const REVERB_PORT = Number(process.env.E2E_REVERB_PORT ?? 8080);
+const APP_PORT = Number(process.env.E2E_APP_PORT ?? 8133);
+const REVERB_PORT = Number(process.env.E2E_REVERB_PORT ?? 8099);
 const baseURL = `http://127.0.0.1:${APP_PORT}`;
+
+/** Both servers get the same Reverb credentials; rate limits are raised for the suite. */
+const serverEnv = {
+    APP_URL: baseURL,
+    BROADCAST_CONNECTION: 'reverb',
+    REVERB_APP_ID: 'stagecue-e2e',
+    REVERB_APP_KEY: 'stagecue-e2e-key',
+    REVERB_APP_SECRET: 'stagecue-e2e-secret',
+    REVERB_HOST: '127.0.0.1',
+    REVERB_PORT: String(REVERB_PORT),
+    REVERB_SCHEME: 'http',
+    STAGECUE_THROTTLE_SESSION_CREATE: '10000',
+    STAGECUE_THROTTLE_PAIRING_MINUTE: '10000',
+    STAGECUE_THROTTLE_PAIRING_HOUR: '10000',
+    STAGECUE_THROTTLE_COMMANDS: '10000',
+    STAGECUE_THROTTLE_SNAPSHOTS: '10000',
+    STAGECUE_THROTTLE_HEARTBEAT: '10000',
+};
 
 export default defineConfig({
     testDir: './e2e',
@@ -22,16 +40,18 @@ export default defineConfig({
     ],
     webServer: [
         {
-            command: `php artisan serve --host=127.0.0.1 --port=${APP_PORT}`,
+            // --no-reload passes the environment through to the PHP server process.
+            command: `php artisan serve --no-reload --host=127.0.0.1 --port=${APP_PORT}`,
             url: `${baseURL}/up`,
-            reuseExistingServer: !process.env.CI,
-            env: { REVERB_HOST: '127.0.0.1', REVERB_PORT: String(REVERB_PORT), APP_URL: baseURL },
+            reuseExistingServer: false,
+            env: serverEnv,
             timeout: 60_000,
         },
         {
             command: `php artisan reverb:start --host=127.0.0.1 --port=${REVERB_PORT}`,
             port: REVERB_PORT,
-            reuseExistingServer: !process.env.CI,
+            reuseExistingServer: false,
+            env: serverEnv,
             timeout: 60_000,
         },
     ],

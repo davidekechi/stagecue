@@ -103,6 +103,7 @@ jobs:
           php artisan migrate --force
       - run: npm run build
       - run: npx playwright install --with-deps chromium
+      # Playwright boots `php artisan serve` and `php artisan reverb:start` itself (playwright.config.ts).
       - name: Playwright (Chromium)
         run: npm run test:e2e -- --project=chromium
       - uses: actions/upload-artifact@v4

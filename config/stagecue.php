@@ -10,6 +10,16 @@ return [
     'controller_token_days' => 7,
     'snapshot_max_bytes' => 16384,
 
+    // LLD §7.3 rate limits (per minute unless noted).
+    'throttle' => [
+        'session_create' => (int) env('STAGECUE_THROTTLE_SESSION_CREATE', 10),
+        'pairing_minute' => (int) env('STAGECUE_THROTTLE_PAIRING_MINUTE', 5),
+        'pairing_hour' => (int) env('STAGECUE_THROTTLE_PAIRING_HOUR', 20),
+        'commands' => (int) env('STAGECUE_THROTTLE_COMMANDS', 60),
+        'snapshots' => (int) env('STAGECUE_THROTTLE_SNAPSHOTS', 120),
+        'heartbeat' => (int) env('STAGECUE_THROTTLE_HEARTBEAT', 30),
+    ],
+
     // The WebSocket endpoint the BROWSER connects to. Defaults to the server-side Reverb settings.
     'reverb_client' => [
         'host' => env('STAGECUE_REVERB_CLIENT_HOST', env('REVERB_HOST')),
