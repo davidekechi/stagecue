@@ -13,7 +13,7 @@ const route = useRoute();
 const mode = ref<"login" | "register">(
     route.query.mode === "register" ? "register" : "login",
 );
-const username = ref("");
+const email = ref("");
 const password = ref("");
 const confirmation = ref("");
 const busy = ref(false);
@@ -25,7 +25,7 @@ const next = computed(() => {
 });
 const canSubmit = computed(
     () =>
-        username.value.trim().length > 0 &&
+        email.value.trim().length > 0 &&
         password.value.length > 0 &&
         (mode.value === "login" || confirmation.value.length > 0) &&
         !busy.value,
@@ -42,11 +42,11 @@ async function submit() {
     error.value = null;
     try {
         if (mode.value === "login")
-            await login(api, username.value.trim(), password.value);
+            await login(api, email.value.trim(), password.value);
         else
             await register(
                 api,
-                username.value.trim(),
+                email.value.trim(),
                 password.value,
                 confirmation.value,
             );
@@ -119,18 +119,19 @@ async function submit() {
                 @submit.prevent="submit"
             >
                 <label class="flex flex-col gap-1.5">
-                    <span class="text-sm font-semibold">Username</span>
+                    <span class="text-sm font-semibold">Email</span>
                     <input
-                        id="login-username"
-                        v-model="username"
-                        type="text"
+                        id="login-email"
+                        v-model="email"
+                        type="email"
+                        inputmode="email"
                         autocomplete="username"
                         autocapitalize="none"
                         autocorrect="off"
                         spellcheck="false"
-                        maxlength="40"
+                        maxlength="254"
                         class="h-14 rounded-xl border-2 border-panel-2 bg-transparent px-4 text-lg outline-none focus:border-ink"
-                        data-testid="login-username"
+                        data-testid="login-email"
                     />
                 </label>
                 <label class="flex flex-col gap-1.5">

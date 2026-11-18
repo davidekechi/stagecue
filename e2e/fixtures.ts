@@ -16,8 +16,8 @@ export const ACCOUNT_KEY = 'stagecue.account';
 export async function loginToken(request: APIRequestContext, account: E2eAccount) {
     const res = await request.post('/api/auth/login', { data: account, headers: { Accept: 'application/json' } });
     if (res.status() !== 200) throw new Error(`E2E login failed: ${res.status()} ${await res.text()}`);
-    const body = (await res.json()) as { user: { id: number; username: string }; token: string };
-    return { id: body.user.id, username: body.user.username, token: body.token };
+    const body = (await res.json()) as { user: { id: number; email: string }; token: string };
+    return { id: body.user.id, email: body.user.email, token: body.token };
 }
 
 /** Logs a browser context in before any page script runs (once per tab, so a test can still log out). */
@@ -40,7 +40,7 @@ export async function logIn(context: BrowserContext, request: APIRequestContext,
 export const test = base.extend<Fixtures>({
     loggedOut: [false, { option: true }],
     account: async ({ request }, use) => {
-        const account = { username: `e2e-${randomUUID().slice(0, 12)}`, password: 'e2e-password' };
+        const account = { email: `e2e-${randomUUID().slice(0, 12)}@example.test`, password: 'e2e-password' };
         const res = await request.post('/api/auth/register', { data: { ...account, password_confirmation: account.password }, headers: { Accept: 'application/json' } });
         if (res.status() !== 201) throw new Error(`E2E sign-up failed: ${res.status()} ${await res.text()}`);
         setE2eAccount(account);

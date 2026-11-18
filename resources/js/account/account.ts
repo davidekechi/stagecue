@@ -4,7 +4,7 @@ import type { ApiClient } from "@/transport/ApiClient";
 
 export interface Account {
     id: number;
-    username: string;
+    email: string;
     token: string;
 }
 
@@ -16,7 +16,7 @@ export function getAccount(): Account | null {
         if (!raw) return null;
         const a = JSON.parse(raw) as Partial<Account>;
         return typeof a.token === "string" &&
-            typeof a.username === "string" &&
+            typeof a.email === "string" &&
             typeof a.id === "number"
             ? (a as Account)
             : null;
@@ -44,39 +44,39 @@ export function clearAccount(): void {
 export const accountToken = (): string | null => getAccount()?.token ?? null;
 
 interface AuthResponse {
-    user: { id: number; username: string };
+    user: { id: number; email: string };
     token: string;
 }
 
 export async function login(
     api: ApiClient,
-    username: string,
+    email: string,
     password: string,
 ): Promise<Account> {
     const r = await api.request<AuthResponse>(
         "POST",
         "/auth/login",
-        { username, password },
+        { email, password },
         { auth: false },
     );
-    const a = { id: r.user.id, username: r.user.username, token: r.token };
+    const a = { id: r.user.id, email: r.user.email, token: r.token };
     setAccount(a);
     return a;
 }
 
 export async function register(
     api: ApiClient,
-    username: string,
+    email: string,
     password: string,
     confirmation: string,
 ): Promise<Account> {
     const r = await api.request<AuthResponse>(
         "POST",
         "/auth/register",
-        { username, password, password_confirmation: confirmation },
+        { email, password, password_confirmation: confirmation },
         { auth: false },
     );
-    const a = { id: r.user.id, username: r.user.username, token: r.token };
+    const a = { id: r.user.id, email: r.user.email, token: r.token };
     setAccount(a);
     return a;
 }
@@ -108,7 +108,7 @@ export function authErrorMessage(
     }
     switch (code) {
         case "INVALID_CREDENTIALS":
-            return "That username and password don’t match an account.";
+            return "That email and password don’t match an account.";
         case "REGISTRATION_CLOSED":
             return "New accounts can’t be created right now. Ask your team for the login.";
         case "RATE_LIMITED":

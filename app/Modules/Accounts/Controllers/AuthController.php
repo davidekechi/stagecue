@@ -19,7 +19,7 @@ class AuthController
     /** POST /auth/register */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $r = $this->accounts->register($request->string('username')->toString(), $request->string('password')->toString(), $request->userAgent());
+        $r = $this->accounts->register($request->string('email')->toString(), $request->string('password')->toString(), $request->userAgent());
 
         return new JsonResponse(['user' => AccountService::payload($r['user']), 'token' => $r['token']], 201);
     }
@@ -27,7 +27,7 @@ class AuthController
     /** POST /auth/login */
     public function login(LoginRequest $request): JsonResponse
     {
-        $r = $this->accounts->login($request->string('username')->toString(), $request->string('password')->toString(), $request->userAgent());
+        $r = $this->accounts->login($request->string('email')->toString(), $request->string('password')->toString(), $request->userAgent());
 
         return new JsonResponse(['user' => AccountService::payload($r['user']), 'token' => $r['token']]);
     }

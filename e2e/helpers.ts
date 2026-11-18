@@ -2,7 +2,7 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
 export interface E2eAccount {
-    username: string;
+    email: string;
     password: string;
 }
 

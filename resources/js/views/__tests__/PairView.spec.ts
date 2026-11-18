@@ -13,7 +13,7 @@ const TOKEN = 'q3mAbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-Za';
 const ok = { session: { id: 'S1', displayName: 'Main Hall TV' }, device: { id: 'C1', role: 'controller' }, token: 'tok', realtime: { key: 'k', host: 'h', port: 443, scheme: 'https', heartbeatMode: 'whisper', staleMs: 10000 }, serverTime: 0 };
 
 async function setup(pair: ApiClient['pair']) {
-    setAccount({ id: 1, username: 'team', token: 'acct' });
+    setAccount({ id: 1, email: 'team@church.org', token: 'acct' });
     const router = createAppRouter(createMemoryHistory());
     await router.push('/pair');
     const api = { pair: vi.fn(pair) } as unknown as ApiClient;

@@ -57,12 +57,12 @@ function something()
 */
 
 /**
- * A24 — a logged-in account token. The same username always yields the same account within a test.
+ * A24 — a logged-in account token. The same name always yields the same account (name@example.test) within a test.
  */
-function accountToken(string $username = 'team'): string
+function accountToken(string $name = 'team'): string
 {
-    $user = User::query()->where('username', $username)->first()
-        ?? User::query()->create(['username' => $username, 'password' => 'password123']);
+    $user = User::query()->where('email', "{$name}@example.test")->first()
+        ?? User::query()->create(['email' => "{$name}@example.test", 'password' => 'password123']);
 
     return $user->createToken('account:test', ['account'], now()->addDays(90))->plainTextToken;
 }

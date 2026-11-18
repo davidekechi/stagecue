@@ -52,7 +52,7 @@ class ApiException extends RuntimeException
 
     public static function invalidCredentials(): self
     {
-        return new self('INVALID_CREDENTIALS', 422, 'That username and password don’t match an account.');
+        return new self('INVALID_CREDENTIALS', 422, 'That email and password don’t match an account.');
     }
 
     public static function registrationClosed(): self

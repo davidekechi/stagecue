@@ -3,17 +3,17 @@
 use App\Models\User;
 use App\Modules\Sessions\Models\PresentationSession;
 
-// A24 — username/password accounts gate the Display and the Controller.
+// A24 — email/password accounts gate the Display and the Controller.
 
 it('signs up, logs in, reads the account and logs out', function () {
-    $reg = $this->postJson('/api/auth/register', ['username' => ' Team.Main ', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])
-        ->assertCreated()->assertJsonPath('user.username', 'team.main')->json();
-    expect(User::query()->where('username', 'team.main')->exists())->toBeTrue();
+    $reg = $this->postJson('/api/auth/register', ['email' => ' Team@Church.ORG ', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])
+        ->assertCreated()->assertJsonPath('user.email', 'team@church.org')->json();
+    expect(User::query()->where('email', 'team@church.org')->exists())->toBeTrue();
 
-    $login = $this->postJson('/api/auth/login', ['username' => 'TEAM.MAIN', 'password' => 'secret-pass'])->assertOk()->json();
+    $login = $this->postJson('/api/auth/login', ['email' => 'TEAM@church.org', 'password' => 'secret-pass'])->assertOk()->json();
     expect($login['token'])->not->toBe($reg['token']);
 
-    asDevice($login['token'])->getJson('/api/auth/me')->assertOk()->assertJsonPath('user.username', 'team.main');
+    asDevice($login['token'])->getJson('/api/auth/me')->assertOk()->assertJsonPath('user.email', 'team@church.org');
     asDevice($login['token'])->postJson('/api/auth/logout')->assertNoContent();
     asDevice($login['token'])->getJson('/api/auth/me')->assertUnauthorized();
     asDevice($reg['token'])->getJson('/api/auth/me')->assertOk(); // other devices stay logged in
@@ -21,21 +21,22 @@ it('signs up, logs in, reads the account and logs out', function () {
 
 it('validates sign-up and rejects wrong passwords', function () {
     config(['stagecue.throttle.register' => 20]);
-    $this->postJson('/api/auth/register', ['username' => 'ab', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])->assertUnprocessable();
-    $this->postJson('/api/auth/register', ['username' => 'has space', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])->assertUnprocessable();
-    $this->postJson('/api/auth/register', ['username' => 'team', 'password' => 'short', 'password_confirmation' => 'short'])->assertUnprocessable();
-    $this->postJson('/api/auth/register', ['username' => 'team', 'password' => 'secret-pass', 'password_confirmation' => 'other-pass'])->assertUnprocessable();
-    $this->postJson('/api/auth/register', ['username' => 'team', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])->assertCreated();
-    $this->postJson('/api/auth/register', ['username' => 'TEAM', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])
-        ->assertUnprocessable()->assertJsonPath('error.errors.username.0', 'That username is taken.');
+    $ok = ['password' => 'secret-pass', 'password_confirmation' => 'secret-pass'];
+    $this->postJson('/api/auth/register', ['email' => 'not-an-email'] + $ok)->assertUnprocessable()->assertJsonPath('error.errors.email.0', 'Enter a valid email address.');
+    $this->postJson('/api/auth/register', $ok)->assertUnprocessable();
+    $this->postJson('/api/auth/register', ['email' => 'team@church.org', 'password' => 'short', 'password_confirmation' => 'short'])->assertUnprocessable();
+    $this->postJson('/api/auth/register', ['email' => 'team@church.org', 'password' => 'secret-pass', 'password_confirmation' => 'other-pass'])->assertUnprocessable();
+    $this->postJson('/api/auth/register', ['email' => 'team@church.org'] + $ok)->assertCreated();
+    $this->postJson('/api/auth/register', ['email' => 'TEAM@church.org'] + $ok)
+        ->assertUnprocessable()->assertJsonPath('error.errors.email.0', 'An account with that email already exists. Log in instead.');
 
-    $this->postJson('/api/auth/login', ['username' => 'team', 'password' => 'wrong-pass'])->assertUnprocessable()->assertJsonPath('error.code', 'INVALID_CREDENTIALS');
-    $this->postJson('/api/auth/login', ['username' => 'nobody', 'password' => 'secret-pass'])->assertUnprocessable()->assertJsonPath('error.code', 'INVALID_CREDENTIALS');
+    $this->postJson('/api/auth/login', ['email' => 'team@church.org', 'password' => 'wrong-pass'])->assertUnprocessable()->assertJsonPath('error.code', 'INVALID_CREDENTIALS');
+    $this->postJson('/api/auth/login', ['email' => 'nobody@church.org', 'password' => 'secret-pass'])->assertUnprocessable()->assertJsonPath('error.code', 'INVALID_CREDENTIALS');
 });
 
 it('can switch sign-up off', function () {
     config(['stagecue.registration' => 'closed']);
-    $this->postJson('/api/auth/register', ['username' => 'team', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])
+    $this->postJson('/api/auth/register', ['email' => 'team@church.org', 'password' => 'secret-pass', 'password_confirmation' => 'secret-pass'])
         ->assertForbidden()->assertJsonPath('error.code', 'REGISTRATION_CLOSED');
 });
 
@@ -46,7 +47,7 @@ it('needs an account to open a display or pair a phone', function () {
     // A device token is not an account token.
     $d = createDisplay();
     asDevice($d['token'])->postJson('/api/sessions', [])->assertUnauthorized()->assertJsonPath('error.code', 'ACCOUNT_REQUIRED');
-    expect(PresentationSession::find($d['session'])->user_id)->toBe(User::query()->where('username', 'team')->value('id'));
+    expect(PresentationSession::find($d['session'])->user_id)->toBe(User::query()->where('email', 'team@example.test')->value('id'));
     expect($d['body']['session']['accountId'])->toBeInt();
 });
 
@@ -70,7 +71,7 @@ it('never pairs into a display created before accounts existed', function () {
 it('limits login attempts', function () {
     config(['stagecue.throttle.login' => 3]);
     foreach (range(1, 3) as $_) {
-        $this->postJson('/api/auth/login', ['username' => 'team', 'password' => 'nope-nope'])->assertUnprocessable();
+        $this->postJson('/api/auth/login', ['email' => 'team@church.org', 'password' => 'nope-nope'])->assertUnprocessable();
     }
-    $this->postJson('/api/auth/login', ['username' => 'team', 'password' => 'nope-nope'])->assertStatus(429);
+    $this->postJson('/api/auth/login', ['email' => 'team@church.org', 'password' => 'nope-nope'])->assertStatus(429);
 });

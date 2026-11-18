@@ -12,8 +12,8 @@ Shared JSON fixtures for every example below live in `resources/js/contracts/fix
 ### 1.0 Accounts (A24)
 | Endpoint | Auth | Body → response |
 |---|---|---|
-| `POST /auth/register` | public, 5/min/IP | `{ username, password, password_confirmation }` → `201 { user: { id, username }, token }`; `403 REGISTRATION_CLOSED` when sign-up is off |
-| `POST /auth/login` | public, 10/min per IP + username | `{ username, password }` → `200 { user, token }`; `422 INVALID_CREDENTIALS` |
+| `POST /auth/register` | public, 5/min/IP | `{ email, password, password_confirmation }` → `201 { user: { id, email }, token }`; `403 REGISTRATION_CLOSED` when sign-up is off |
+| `POST /auth/login` | public, 10/min per IP + email | `{ email, password }` → `200 { user, token }`; `422 INVALID_CREDENTIALS` |
 | `GET /auth/me` | account | → `{ user, registration: "open" \| "closed" }` |
 | `POST /auth/logout` | account | revokes this device's account token → `204` |
 

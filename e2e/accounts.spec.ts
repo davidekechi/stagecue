@@ -2,10 +2,10 @@ import { test, expect } from './fixtures';
 import { openDisplay } from './helpers';
 import type { Page } from '@playwright/test';
 
-// A24 — username/password accounts. The Display and the phone must be logged in to the same account.
+// A24 — email/password accounts. The Display and the phone must be logged in to the same account.
 
-async function logInUi(page: Page, username: string, password: string) {
-    await page.getByTestId('login-username').fill(username);
+async function logInUi(page: Page, email: string, password: string) {
+    await page.getByTestId('login-email').fill(email);
     await page.getByTestId('login-password').fill(password);
     await page.getByTestId('login-submit').click();
 }
@@ -14,14 +14,14 @@ test.describe('logged out', () => {
     test.use({ loggedOut: true });
 
     test('ACC-01 sign up on the display, log in on the phone, pair and control', async ({ displayPage, controllerPage }) => {
-        const username = `acc-${Date.now().toString(36)}`;
+        const email = `acc-${Date.now().toString(36)}@example.test`;
         const password = 'church-password';
 
         await displayPage.goto('/display');
         await expect(displayPage.getByTestId('login-view')).toBeVisible();
         await expect(displayPage.getByTestId('display-view')).toHaveCount(0);
         await displayPage.getByTestId('register-tab').click();
-        await displayPage.getByTestId('login-username').fill(username);
+        await displayPage.getByTestId('login-email').fill(email);
         await displayPage.getByTestId('login-password').fill(password);
         await displayPage.getByTestId('login-confirm').fill(password);
         await displayPage.getByTestId('login-submit').click();
@@ -30,9 +30,9 @@ test.describe('logged out', () => {
 
         await controllerPage.goto('/pair');
         await expect(controllerPage.getByTestId('login-view')).toBeVisible();
-        await logInUi(controllerPage, username, 'wrong-password');
+        await logInUi(controllerPage, email, 'wrong-password');
         await expect(controllerPage.getByTestId('login-error')).toContainText('don’t match');
-        await logInUi(controllerPage, username, password);
+        await logInUi(controllerPage, email, password);
         await expect(controllerPage.getByTestId('pair-view')).toBeVisible();
         await controllerPage.getByTestId('pair-name').fill('Phone');
         await controllerPage.getByTestId('pair-code').fill(code);
@@ -50,7 +50,7 @@ test.describe('logged out', () => {
 
 test('ACC-03 a phone on a different account cannot pair', async ({ displayPage, controllerPage, request }) => {
     const code = await openDisplay(displayPage);
-    const other = { username: `other-${Date.now().toString(36)}`, password: 'other-password' };
+    const other = { email: `other-${Date.now().toString(36)}@example.test`, password: 'other-password' };
     expect((await request.post('/api/auth/register', { data: { ...other, password_confirmation: other.password }, headers: { Accept: 'application/json' } })).status()).toBe(201);
 
     // Log the phone out of the test account, then in to the other one.
@@ -58,7 +58,7 @@ test('ACC-03 a phone on a different account cannot pair', async ({ displayPage, 
     await controllerPage.getByTestId('home-logout').click();
     await expect(controllerPage.getByTestId('home-login')).toBeVisible();
     await controllerPage.getByTestId('home-login').click();
-    await logInUi(controllerPage, other.username, other.password);
+    await logInUi(controllerPage, other.email, other.password);
     await controllerPage.goto('/pair');
     await controllerPage.getByTestId('pair-name').fill('Phone');
     await controllerPage.getByTestId('pair-code').fill(code);

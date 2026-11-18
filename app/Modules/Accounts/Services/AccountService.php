@@ -8,24 +8,24 @@ use App\Exceptions\ApiException;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-/** A24 — username/password accounts with long-lived, sliding Sanctum tokens (ability `account`). */
+/** A24 — email/password accounts with long-lived, sliding Sanctum tokens (ability `account`). */
 class AccountService
 {
     /** @return array{user: User, token: string} */
-    public function register(string $username, string $password, ?string $deviceName): array
+    public function register(string $email, string $password, ?string $deviceName): array
     {
         if (config('stagecue.registration') !== 'open') {
             throw ApiException::registrationClosed();
         }
-        $user = User::query()->create(['username' => strtolower($username), 'password' => $password]);
+        $user = User::query()->create(['email' => strtolower(trim($email)), 'password' => $password]);
 
         return ['user' => $user, 'token' => $this->issueToken($user, $deviceName)];
     }
 
     /** @return array{user: User, token: string} */
-    public function login(string $username, string $password, ?string $deviceName): array
+    public function login(string $email, string $password, ?string $deviceName): array
     {
-        $user = User::query()->where('username', strtolower(trim($username)))->first();
+        $user = User::query()->where('email', strtolower(trim($email)))->first();
         if (! $user || ! Hash::check($password, $user->password)) {
             throw ApiException::invalidCredentials();
         }
@@ -40,9 +40,9 @@ class AccountService
         return $user->createToken($name, ['account'], now()->addDays((int) config('stagecue.account_token_days')))->plainTextToken;
     }
 
-    /** @return array{id: int, username: string} */
+    /** @return array{id: int, email: string} */
     public static function payload(User $user): array
     {
-        return ['id' => $user->id, 'username' => $user->username];
+        return ['id' => $user->id, 'email' => $user->email];
     }
 }

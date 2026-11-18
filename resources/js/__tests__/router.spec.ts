@@ -19,7 +19,7 @@ async function mountAt(path: string) {
 }
 
 describe('router', () => {
-    beforeEach(() => setAccount({ id: 1, username: 'team', token: 'acct' }));
+    beforeEach(() => setAccount({ id: 1, email: 'team@church.org', token: 'acct' }));
 
     it.each([
         ['/', 'home-view'],

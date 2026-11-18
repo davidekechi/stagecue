@@ -44,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('commands', fn (Request $r) => Limit::perMinute($t('commands'))->by('commands:'.$device($r)));
         RateLimiter::for('snapshots', fn (Request $r) => Limit::perMinute($t('snapshots'))->by('snapshots:'.$device($r)));
-        RateLimiter::for('login', fn (Request $r) => Limit::perMinute($t('login'))->by('login:'.$r->ip().'|'.strtolower((string) $r->input('username'))));
+        RateLimiter::for('login', fn (Request $r) => Limit::perMinute($t('login'))->by('login:'.$r->ip().'|'.strtolower((string) $r->input('email'))));
         RateLimiter::for('register', fn (Request $r) => Limit::perMinute($t('register'))->by('register:'.$r->ip()));
         RateLimiter::for('heartbeat', fn (Request $r) => Limit::perMinute($t('heartbeat'))->by('heartbeat:'.$device($r)));
     }

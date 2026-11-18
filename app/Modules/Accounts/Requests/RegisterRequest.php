@@ -11,13 +11,13 @@ class RegisterRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->merge(['username' => strtolower(trim((string) $this->input('username')))]);
+        $this->merge(['email' => strtolower(trim((string) $this->input('email')))]);
     }
 
     public function rules(): array
     {
         return [
-            'username' => ['required', 'string', 'min:3', 'max:40', 'regex:/^[a-z0-9._-]+$/', Rule::unique('users', 'username')],
+            'email' => ['required', 'string', 'email', 'max:254', Rule::unique('users', 'email')],
             'password' => ['required', 'string', 'min:8', 'max:200', 'confirmed'],
         ];
     }
@@ -25,8 +25,8 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'username.regex' => 'Use letters, numbers, dots, dashes or underscores.',
-            'username.unique' => 'That username is taken.',
+            'email.email' => 'Enter a valid email address.',
+            'email.unique' => 'An account with that email already exists. Log in instead.',
             'password.confirmed' => 'The passwords don’t match.',
         ];
     }

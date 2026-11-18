@@ -94,7 +94,7 @@ async function onLogout() {
                 >
                     <span class="min-w-0 truncate">Logged in as
                         <strong class="text-ink">{{
-                            account.username
+                            account.email
                         }}</strong></span>
                     <button
                         type="button"
