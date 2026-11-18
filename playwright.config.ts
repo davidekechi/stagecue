@@ -7,6 +7,9 @@ const baseURL = `http://127.0.0.1:${APP_PORT}`;
 /** Both servers get the same Reverb credentials; rate limits are raised for the suite. */
 const serverEnv = {
     APP_URL: baseURL,
+    // Never share the developer's database or cache (rate-limit counters live there).
+    DB_DATABASE: process.env.E2E_DB_DATABASE ?? 'stagecue_e2e',
+    CACHE_PREFIX: 'stagecue-e2e-',
     BROADCAST_CONNECTION: 'reverb',
     REVERB_APP_ID: 'stagecue-e2e',
     REVERB_APP_KEY: 'stagecue-e2e-key',
@@ -41,7 +44,7 @@ export default defineConfig({
     webServer: [
         {
             // --no-reload passes the environment through to the PHP server process.
-            command: `php artisan serve --no-reload --host=127.0.0.1 --port=${APP_PORT}`,
+            command: `php artisan migrate:fresh --force --no-interaction && php artisan serve --no-reload --host=127.0.0.1 --port=${APP_PORT}`,
             url: `${baseURL}/up`,
             reuseExistingServer: false,
             env: serverEnv,

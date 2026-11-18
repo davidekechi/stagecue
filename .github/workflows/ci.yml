@@ -73,7 +73,7 @@ jobs:
         env:
           POSTGRES_USER: stagecue
           POSTGRES_PASSWORD: secret
-          POSTGRES_DB: stagecue
+          POSTGRES_DB: stagecue_e2e
         ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U stagecue" --health-interval 5s --health-timeout 5s --health-retries 10
@@ -81,7 +81,7 @@ jobs:
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_DATABASE: stagecue
+      DB_DATABASE: stagecue_e2e
       DB_USERNAME: stagecue
       DB_PASSWORD: secret
     steps:
