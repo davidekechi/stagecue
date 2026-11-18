@@ -14,7 +14,7 @@ const state = (): PresentationState => ({
     revision: 4,
     timer: { status: 'running', durationMs: 900_000, endsAtWall: T0 + 900_000, startedAtWall: T0 },
     message: { status: 'showing', id: 'm1', text: 'Line\nbreak', mode: 'timed', durationMs: 10_000, shownAtWall: T0, expiresAtWall: T0 + 10_000, corner: 'bl' },
-    display: { blackout: true },
+    display: { blackout: true, clock: false },
 });
 const rec = (i: number): ProcessedRecord => ({ commandId: `0193a3b4-0000-7000-8000-${String(i).padStart(12, '0')}`, appliedAt: T0 + i, result: 'APPLIED' });
 

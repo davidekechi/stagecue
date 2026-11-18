@@ -81,7 +81,7 @@ describe('reducer', () => {
         const r = apply(s, command('PRESENTATION_NEW'), T0 + 5, { newPresentationId: () => 'NEWID' });
         expect(r).toMatchObject({ ok: true, changed: true, events: ['PresentationStarted'] });
         const n = ok(r);
-        expect(n).toMatchObject({ presentationId: 'NEWID', revision: 0, timer: { status: 'idle' }, display: { blackout: false }, updatedAtWall: T0 + 5 });
+        expect(n).toMatchObject({ presentationId: 'NEWID', revision: 0, timer: { status: 'idle' }, display: { blackout: false, clock: false }, updatedAtWall: T0 + 5 });
         expect(n.settings.defaultCorner).toBe('bl');
         expect(ok(apply(s, command('PRESENTATION_NEW'), T0)).presentationId).toMatch(/^[0-9A-Z]{26}$/);
     });

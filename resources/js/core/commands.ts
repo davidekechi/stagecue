@@ -13,6 +13,8 @@ export const COMMAND_NAMES: readonly CommandName[] = [
     'MESSAGE_DISMISS',
     'BLACKOUT_ON',
     'BLACKOUT_OFF',
+    'CLOCK_ON',
+    'CLOCK_OFF',
     'SETTINGS_UPDATE',
     'PRESENTATION_NEW',
     'SYNC_REQUEST',

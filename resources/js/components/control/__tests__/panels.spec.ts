@@ -40,6 +40,16 @@ describe('TimerPanel', () => {
         expect(w.emitted('send')![1]!.slice(0, 2)).toEqual(['TIMER_PAUSE', {}]);
     });
 
+    it('A23: the clock switch sends CLOCK_ON / CLOCK_OFF', async () => {
+        const off = mountTimer('idle');
+        expect(off.find('[data-testid="clock-toggle"]').attributes('aria-checked')).toBe('false');
+        await off.find('[data-testid="clock-toggle"]').trigger('click');
+        expect(off.emitted('send')![0]!.slice(0, 2)).toEqual(['CLOCK_ON', {}]);
+        const on = mount(TimerPanel, { props: { status: 'idle', clock: true, canSend: true, latest: () => undefined, duration: { h: 0, m: 15, s: 0 }, 'onUpdate:duration': () => {} } });
+        await on.find('[data-testid="clock-toggle"]').trigger('click');
+        expect(on.emitted('send')![0]!.slice(0, 2)).toEqual(['CLOCK_OFF', {}]);
+    });
+
     it('A3: Display & start sends SET, then START after SET is confirmed', async () => {
         const w = mountTimer('idle');
         await w.find('[data-testid="btn-display-start"]').trigger('click');
@@ -88,7 +98,7 @@ describe('BlackoutZone', () => {
 
 const T = 1_794_660_000_000;
 const mirror = (): Mirror => ({
-    state: { ...createInitialState('P', T), revision: 3, timer: { status: 'running', durationMs: 900_000, startedAtWall: T, endsAtWall: T + 600_000 }, display: { blackout: true } },
+    state: { ...createInitialState('P', T), revision: 3, timer: { status: 'running', durationMs: 900_000, startedAtWall: T, endsAtWall: T + 600_000 }, display: { blackout: true, clock: false } },
     computed: { timerRemainingMs: 600_000, overtimeMs: 0, messageRemainingMs: null },
     capturedAtWall: T,
     receivedAtMono: 0,

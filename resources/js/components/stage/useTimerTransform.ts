@@ -12,7 +12,7 @@ export const DIGIT_CAP_RATIO = 0.727;
 /** The full-size timer may use this share of the stage width (5% safe area each side). */
 export const WIDTH_RATIO = 0.9;
 /** Compact (corner) timer: box height as a share of the stage height. */
-export const COMPACT_HEIGHT_RATIO = 0.11;
+export const COMPACT_HEIGHT_RATIO = 0.08;
 export const MARGIN_RATIO = 0.04;
 /** Overtime counter under the big TIME UP!: box height share, and where its centre sits. */
 export const OVERTIME_HEIGHT_RATIO = 0.15;

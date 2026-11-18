@@ -170,6 +170,7 @@ onBeforeUnmount(() => {
             <TimerPanel
                 v-model:duration="duration"
                 :status="timerStatus"
+                :clock="store.mirror?.state.display.clock ?? false"
                 :can-send="store.canSend"
                 :latest="store.latest"
                 @send="(n, p, done) => send(n, p as never, done)"

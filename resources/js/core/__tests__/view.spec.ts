@@ -15,7 +15,7 @@ const timers: Record<string, TimerState> = {
 };
 const showing: MessageState = { status: 'showing', id: ID_A, text: 'Hello', mode: 'persistent', durationMs: null, shownAtWall: T0, expiresAtWall: null, corner: 'bl' };
 
-const state = (timer: TimerState, message: MessageState, blackout: boolean): PresentationState => ({ ...fresh(), timer, message, display: { blackout } });
+const state = (timer: TimerState, message: MessageState, blackout: boolean): PresentationState => ({ ...fresh(), timer, message, display: { blackout, clock: false } });
 
 describe('deriveView', () => {
     it('R-03 render priority matrix: blackout > message > overtime > timer > standby', () => {

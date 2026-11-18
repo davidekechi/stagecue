@@ -147,7 +147,7 @@ describe('DisplayRuntime (local mode)', () => {
             schema: 1,
             presentationId: 'P',
             revision: 3,
-            display: { blackout: false },
+            display: { blackout: false, clock: false },
             settings: { defaultCorner: 'tr', overtimeInterruptsMessage: true, defaultMessageDurationMs: 10_000 },
             timer: { status: 'running', durationMs: 60_000, startedAtWall: T0, endsAtWall: T0 + 60_000 },
             message: { status: 'showing', id: MSG, text: 'x', mode: 'timed', durationMs: 30_000, shownAtWall: T0, expiresAtWall: T0 + 30_000, corner: 'tr' },
@@ -239,7 +239,7 @@ describe('DisplayRuntime (local mode)', () => {
             rt.tick();
         }
         await rt.idle();
-        expect(rt.state).toMatchObject({ display: { blackout: true }, timer: { status: 'overtime' } });
+        expect(rt.state).toMatchObject({ display: { blackout: true, clock: false }, timer: { status: 'overtime' } });
         rt.stop();
         const { rt: again } = await makeRuntime(clock, db);
         await again.boot();

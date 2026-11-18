@@ -82,8 +82,8 @@ describe('negative cases', () => {
 });
 
 describe('commands', () => {
-    it('lists the 13 catalogue commands and the destructive set', () => {
-        expect(COMMAND_NAMES).toHaveLength(13);
+    it('lists the 15 catalogue commands and the destructive set', () => {
+        expect(COMMAND_NAMES).toHaveLength(15);
         expect([...DESTRUCTIVE].sort()).toEqual(['PRESENTATION_NEW', 'TIMER_CLEAR', 'TIMER_RESET', 'TIMER_SET']);
         expect(isCommandName('TIMER_SET')).toBe(true);
         expect(isCommandName('NOPE')).toBe(false);

@@ -30,6 +30,7 @@ const say = (corner: Corner, mode: 'timed' | 'persistent' = 'timed') =>
         <button tabindex="-1" data-testid="dev-msg-persistent" class="dev-btn" @mousedown.prevent @click="say('tr', 'persistent')">Msg ∞</button>
         <button tabindex="-1" class="dev-btn" @mousedown.prevent @click="store.localCommand('MESSAGE_DISMISS', {})">Dismiss</button>
         <button tabindex="-1" class="dev-btn" @mousedown.prevent @click="store.localCommand('PRESENTATION_NEW')">New</button>
+        <button tabindex="-1" class="dev-btn" data-testid="dev-clock" @mousedown.prevent @click="store.localCommand(store.state?.display.clock ? 'CLOCK_OFF' : 'CLOCK_ON')">Clock</button>
     </div>
 </template>
 

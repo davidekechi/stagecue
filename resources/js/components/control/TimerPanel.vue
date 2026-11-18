@@ -9,6 +9,8 @@ import DurationPicker from './DurationPicker.vue';
 
 const props = defineProps<{
     status: TimerStatus | null;
+    /** The display shows the time of day when no timer is set (A23). */
+    clock?: boolean;
     canSend: boolean;
     latest: (name: CommandName) => PendingCommand | undefined;
 }>();
@@ -55,6 +57,8 @@ const clear = () => guarded('TIMER_CLEAR', () => plain('TIMER_CLEAR'));
 
 const label = (key: CommandName | 'DISPLAY_START', normal: string) => (armed.value === key ? 'Tap again to confirm' : normal);
 const disabled = computed(() => !props.canSend || !hasMirror.value);
+const clockEntry = computed(() => props.latest(props.clock ? 'CLOCK_OFF' : 'CLOCK_ON'));
+const clockBusy = computed(() => ['sending', 'awaiting'].includes(clockEntry.value?.status ?? ''));
 </script>
 
 <template>
@@ -81,5 +85,24 @@ const disabled = computed(() => !props.canSend || !hasMirror.value);
             </template>
         </div>
         <p v-if="!hasMirror && canSend" class="text-sm text-muted">Waiting for the display’s state…</p>
+
+        <button
+            type="button"
+            role="switch"
+            :aria-checked="!!clock"
+            class="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-desk px-4 text-left disabled:opacity-40"
+            :disabled="disabled || clockBusy"
+            data-testid="clock-toggle"
+            :data-on="!!clock"
+            @click="emit('send', clock ? 'CLOCK_OFF' : 'CLOCK_ON', {})"
+        >
+            <span class="flex flex-col">
+                <span class="text-[1.05rem] font-semibold">Show the time</span>
+                <span class="text-sm text-muted">{{ clockBusy ? 'Waiting for the display…' : 'Shown when no timer is set, e.g. 2:45 PM' }}</span>
+            </span>
+            <span class="relative h-8 w-14 shrink-0 rounded-full transition-colors" :class="clock ? 'bg-go' : 'bg-panel-2'" aria-hidden="true">
+                <span class="absolute top-1 h-6 w-6 rounded-full bg-ink transition-[left]" :class="clock ? 'left-7' : 'left-1'"></span>
+            </span>
+        </button>
     </section>
 </template>

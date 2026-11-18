@@ -4,7 +4,7 @@ import { installKeyboard, keyResolvers, spaceCommand, type KeyboardActions } fro
 
 function setup(target: EventTarget = new EventTarget()) {
     let t = 0;
-    const actions: KeyboardActions = { toggleFullscreen: vi.fn(), toggleBlackout: vi.fn(), startPause: vi.fn(), reset: vi.fn(), dismiss: vi.fn() };
+    const actions: KeyboardActions = { toggleFullscreen: vi.fn(), toggleBlackout: vi.fn(), toggleClock: vi.fn(), startPause: vi.fn(), reset: vi.fn(), dismiss: vi.fn() };
     const dispose = installKeyboard(target as unknown as Window, actions, () => t);
     const press = (key: string, init: KeyboardEventInit = {}, at?: number) => {
         if (at !== undefined) t = at;
@@ -28,6 +28,8 @@ describe('Keyboard', () => {
         press('B');
         press(' ');
         press('d');
+        press('c');
+        expect(actions.toggleClock).toHaveBeenCalledTimes(1);
         expect(actions.toggleFullscreen).toHaveBeenCalledTimes(1);
         expect(actions.toggleBlackout).toHaveBeenCalledTimes(1);
         expect(actions.startPause).toHaveBeenCalledTimes(1);
@@ -62,7 +64,9 @@ describe('Keyboard', () => {
     it('resolvers decide against the live state', () => {
         const s = createInitialState('P', 0);
         expect(keyResolvers.blackout(s)).toEqual({ name: 'BLACKOUT_ON' });
-        expect(keyResolvers.blackout({ ...s, display: { blackout: true } })).toEqual({ name: 'BLACKOUT_OFF' });
+        expect(keyResolvers.blackout({ ...s, display: { blackout: true, clock: false } })).toEqual({ name: 'BLACKOUT_OFF' });
+        expect(keyResolvers.clock(s)).toEqual({ name: 'CLOCK_ON' });
+        expect(keyResolvers.clock({ ...s, display: { blackout: false, clock: true } })).toEqual({ name: 'CLOCK_OFF' });
         expect(keyResolvers.startPause(s)).toBeNull();
         expect(keyResolvers.startPause({ ...s, timer: { status: 'ready', durationMs: 1000 } })).toEqual({ name: 'TIMER_START' });
         expect(keyResolvers.reset(s)).toBeNull();

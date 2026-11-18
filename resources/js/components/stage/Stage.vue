@@ -25,6 +25,8 @@ function timerFor(view: View): TimerInfo | null {
             return { text: view.text, placement: 'center', overtime: false, paused: view.paused };
         case 'overtime':
             return { text: view.text, placement: 'overtime', overtime: true, paused: view.paused };
+        case 'clock':
+            return { text: view.text, placement: 'center', overtime: false, paused: false };
         case 'message':
             return view.compact ? { text: view.compact.text, placement: view.message.corner, overtime: view.compact.overtime, paused: false } : null;
         case 'standby':

@@ -35,7 +35,7 @@ export function createInitialState(presentationId: string, now: number, settings
         schema: 1,
         presentationId,
         revision: 0,
-        display: { blackout: false },
+        display: { blackout: false, clock: false },
         timer: { status: 'idle' },
         message: { status: 'none' },
         settings: { ...settings },
@@ -145,10 +145,16 @@ export function apply(s: PresentationState, a: Action, now: number, deps: Reduce
             break;
         }
         case 'BLACKOUT_ON':
-            step = s.display.blackout ? unchanged(s) : { state: { ...s, display: { blackout: true } }, events: ['BlackoutOn'], changed: true };
+            step = s.display.blackout ? unchanged(s) : { state: { ...s, display: { ...s.display, blackout: true } }, events: ['BlackoutOn'], changed: true };
             break;
         case 'BLACKOUT_OFF':
-            step = !s.display.blackout ? unchanged(s) : { state: { ...s, display: { blackout: false } }, events: ['BlackoutOff'], changed: true };
+            step = !s.display.blackout ? unchanged(s) : { state: { ...s, display: { ...s.display, blackout: false } }, events: ['BlackoutOff'], changed: true };
+            break;
+        case 'CLOCK_ON':
+            step = s.display.clock ? unchanged(s) : { state: { ...s, display: { ...s.display, clock: true } }, events: ['ClockShown'], changed: true };
+            break;
+        case 'CLOCK_OFF':
+            step = !s.display.clock ? unchanged(s) : { state: { ...s, display: { ...s.display, clock: false } }, events: ['ClockHidden'], changed: true };
             break;
         case 'SETTINGS_UPDATE': {
             const patch = v.payload as SettingsUpdatePayload;
@@ -159,7 +165,8 @@ export function apply(s: PresentationState, a: Action, now: number, deps: Reduce
         }
         case 'PRESENTATION_NEW': {
             // A new epoch: revision restarts at 0 (it is not incremented below).
-            const fresh = createInitialState(deps.newPresentationId(now), now, s.settings);
+            const created = createInitialState(deps.newPresentationId(now), now, s.settings);
+            const fresh = { ...created, display: { ...created.display, clock: s.display.clock } };
             return { ok: true, state: fresh, events: ['PresentationStarted'], changed: true };
         }
         case 'SYNC_REQUEST':

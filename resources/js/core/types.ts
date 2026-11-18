@@ -36,7 +36,8 @@ export interface PresentationState {
     schema: 1;
     presentationId: string;
     revision: number;
-    display: { blackout: boolean };
+    /** blackout hides everything; clock shows the time of day when no timer is set (A23). */
+    display: { blackout: boolean; clock: boolean };
     timer: TimerState;
     message: MessageState;
     settings: Settings;
@@ -54,6 +55,8 @@ export type CommandName =
     | 'MESSAGE_DISMISS'
     | 'BLACKOUT_ON'
     | 'BLACKOUT_OFF'
+    | 'CLOCK_ON'
+    | 'CLOCK_OFF'
     | 'SETTINGS_UPDATE'
     | 'PRESENTATION_NEW'
     | 'SYNC_REQUEST';
@@ -81,6 +84,8 @@ export type DomainEvent =
     | 'MessageExpired'
     | 'BlackoutOn'
     | 'BlackoutOff'
+    | 'ClockShown'
+    | 'ClockHidden'
     | 'SettingsUpdated'
     | 'PresentationStarted'
     | 'ClockAdjusted'; // LLD §5.2 (see ambiguity log A12)
@@ -122,6 +127,8 @@ export interface CommandPayloads {
     MESSAGE_DISMISS: MessageDismissPayload;
     BLACKOUT_ON: EmptyPayload;
     BLACKOUT_OFF: EmptyPayload;
+    CLOCK_ON: EmptyPayload;
+    CLOCK_OFF: EmptyPayload;
     SETTINGS_UPDATE: SettingsUpdatePayload;
     PRESENTATION_NEW: EmptyPayload;
     SYNC_REQUEST: EmptyPayload;

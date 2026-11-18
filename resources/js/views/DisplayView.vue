@@ -105,6 +105,7 @@ onMounted(async () => {
         installKeyboard(window, {
             toggleFullscreen: () => void fullscreen.toggle(),
             toggleBlackout: () => void rt.localResolve(keyResolvers.blackout),
+            toggleClock: () => void rt.localResolve(keyResolvers.clock),
             startPause: () => void rt.localResolve(keyResolvers.startPause),
             reset: () => void rt.localResolve(keyResolvers.reset),
             dismiss: () => void rt.localResolve(keyResolvers.dismiss),

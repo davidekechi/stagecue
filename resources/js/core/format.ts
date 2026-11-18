@@ -32,3 +32,11 @@ export function splitDuration(ms: number): { h: number; m: number; s: number } {
 export function joinDuration(h: number, m: number, s: number): number {
     return ((h * 60 + m) * 60 + s) * 1000;
 }
+
+/** Time of day in the device's local time zone, 12-hour with AM/PM: "2:45 PM" (A23). */
+export function formatClock(epochMs: number): string {
+    const d = new Date(epochMs);
+    const h24 = d.getHours();
+    const h = h24 % 12 === 0 ? 12 : h24 % 12;
+    return `${h}:${pad2(d.getMinutes())} ${h24 < 12 ? 'AM' : 'PM'}`;
+}

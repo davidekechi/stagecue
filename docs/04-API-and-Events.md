@@ -166,7 +166,7 @@ If a controller receives a heartbeat whose `revision` > its mirror revision, and
 ```json
 {
   "schema": 1, "presentationId": "01JD3S…", "revision": 42,
-  "display": { "blackout": false },
+  "display": { "blackout": false, "clock": false },
   "timer":   { "status": "running", "durationMs": 900000, "startedAtWall": 1794660000000, "endsAtWall": 1794660900000 },
   "message": { "status": "showing", "id": "0193a3b4-…aaaa", "text": "Please take your seats", "mode": "timed",
                "durationMs": 10000, "shownAtWall": 1794660100150, "expiresAtWall": 1794660110150, "corner": "tr" },
@@ -202,6 +202,8 @@ If a controller receives a heartbeat whose `revision` > its mirror revision, and
 | `MESSAGE_DISMISS` | `{id?}` | any | | MessageDismissed (or no-op) | MessageDismissed |
 | `BLACKOUT_ON` | `{}` | any | | BlackoutOn | — |
 | `BLACKOUT_OFF` | `{}` | any | | BlackoutOff | — |
+| `CLOCK_ON` | `{}` | any | | ClockShown | — (A23: time of day when no timer is set) |
+| `CLOCK_OFF` | `{}` | any | | ClockHidden | — (A23) |
 | `SETTINGS_UPDATE` | `{defaultCorner?, overtimeInterruptsMessage?, defaultMessageDurationMs?}` | any | | SettingsUpdated | — |
 | `SYNC_REQUEST` | `{}` | any | | — (publishes a snapshot) | (Reconnecting/Sync) |
 | *internal* `TIMER_EXPIRED` | — | running | | TimerExpired, OvertimeStarted | TimerExpired, OvertimeStarted |

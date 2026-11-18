@@ -5,6 +5,8 @@ import type { CommandName, PresentationState, TimerStatus } from '@/core/types';
 export interface KeyboardActions {
     toggleFullscreen(): void;
     toggleBlackout(): void;
+    /** Show / hide the time of day (A23). */
+    toggleClock(): void;
     /** Start / pause / resume depending on the timer state (see `spaceCommand`). */
     startPause(): void;
     reset(): void;
@@ -52,6 +54,11 @@ export function installKeyboard(target: Pick<Window, 'addEventListener' | 'remov
                 e.preventDefault();
                 actions.toggleBlackout();
                 break;
+            case 'c':
+            case 'C':
+                e.preventDefault();
+                actions.toggleClock();
+                break;
             case ' ':
             case 'Spacebar':
                 e.preventDefault();
@@ -85,6 +92,7 @@ export function installKeyboard(target: Pick<Window, 'addEventListener' | 'remov
 /** Resolvers for the keyboard actions, evaluated against the state inside the commit queue. */
 export const keyResolvers = {
     blackout: (s: PresentationState) => ({ name: (s.display.blackout ? 'BLACKOUT_OFF' : 'BLACKOUT_ON') as CommandName }),
+    clock: (s: PresentationState) => ({ name: (s.display.clock ? 'CLOCK_OFF' : 'CLOCK_ON') as CommandName }),
     startPause: (s: PresentationState) => {
         const name = spaceCommand(s.timer.status);
         return name ? { name } : null;

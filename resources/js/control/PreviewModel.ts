@@ -18,13 +18,13 @@ export function previewView(input: PreviewInput): View {
     const now = base?.now ?? 0;
     let state: PresentationState = base
         ? structuredClone(base.state)
-        : { schema: 1, presentationId: 'preview', revision: 0, display: { blackout: false }, timer: { status: 'idle' }, message: { status: 'none' }, settings: { defaultCorner: 'tr', overtimeInterruptsMessage: false, defaultMessageDurationMs: 10_000 }, updatedAtWall: 0 };
+        : { schema: 1, presentationId: 'preview', revision: 0, display: { blackout: false, clock: false }, timer: { status: 'idle' }, message: { status: 'none' }, settings: { defaultCorner: 'tr', overtimeInterruptsMessage: false, defaultMessageDurationMs: 10_000 }, updatedAtWall: 0 };
     if (input.asOvertime) {
         const durationMs = 'durationMs' in state.timer ? state.timer.durationMs : 900_000;
         state = { ...state, timer: { status: 'overtime', durationMs, startedAtWall: now - durationMs - 5_000, endsAtWall: now - 5_000 } };
     }
     // The preview is about content: a blacked-out stage would hide it.
-    state = { ...state, display: { blackout: false } };
+    state = { ...state, display: { ...state.display, blackout: false } };
     if (input.message) {
         const r = apply(state, command('MESSAGE_SHOW', input.message), now);
         if (r.ok) state = r.state;

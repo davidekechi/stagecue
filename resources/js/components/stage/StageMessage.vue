@@ -30,10 +30,10 @@ defineProps<{ message: { text: string; corner: Corner } | null; hasCompactTimer:
     color: #000; /* black text on the white message stage */
 }
 .stage-message[data-reserve='true'][data-corner^='t'] {
-    top: calc(var(--safe) + 13cqh);
+    top: calc(var(--safe) + 10cqh);
 }
 .stage-message[data-reserve='true'][data-corner^='b'] {
-    bottom: calc(var(--safe) + 13cqh);
+    bottom: calc(var(--safe) + 10cqh);
 }
 .msg-enter-active,
 .msg-leave-active {

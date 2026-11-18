@@ -64,3 +64,19 @@ test('unpair from the phone', async ({ displayPage, controllerPage }) => {
     await expect(controllerPage.getByTestId('pair-view')).toBeVisible();
     await expect(displayPage.getByTestId('controller-connected')).toHaveCount(0, { timeout: 10_000 });
 });
+
+test('A23 the phone shows the time of day; it moves to the corner with a message, like the timer', async ({ displayPage, controllerPage }) => {
+    const code = await openDisplay(displayPage);
+    await pairPhone(controllerPage, code);
+    await controllerPage.getByTestId('clock-toggle').click();
+    await expect(displayPage.getByTestId('stage')).toHaveAttribute('data-kind', 'clock', { timeout: 5_000 });
+    await expect(displayPage.getByTestId('stage-timer')).toHaveText(/^\d{1,2}:\d{2} (AM|PM)$/);
+    await expect(controllerPage.getByTestId('clock-toggle')).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
+
+    await controllerPage.getByTestId('msg-text').fill('Lunch is served');
+    await controllerPage.getByTestId('corner-bl').click();
+    await controllerPage.getByTestId('msg-send').click();
+    await expect(displayPage.getByTestId('stage-message')).toBeVisible({ timeout: 5_000 });
+    await expect(displayPage.getByTestId('stage-timer')).toHaveAttribute('data-placement', 'bl');
+    await expect(displayPage.getByTestId('stage-timer')).toHaveText(/(AM|PM)$/);
+});
