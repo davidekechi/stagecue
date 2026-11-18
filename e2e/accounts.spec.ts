@@ -69,6 +69,8 @@ test('ACC-03 a phone on a different account cannot pair', async ({ displayPage, 
     await expect(controllerPage.getByTestId('home-login')).toBeVisible();
     await controllerPage.getByTestId('home-login').click();
     await logInUi(controllerPage, other.email, other.password);
+    // Wait for the login to finish: navigating away mid-request cancels it (Firefox, WebKit).
+    await expect(controllerPage.getByTestId('home-account')).toBeVisible();
     await controllerPage.goto('/pair');
     await controllerPage.getByTestId('pair-name').fill('Phone');
     await controllerPage.getByTestId('pair-code').fill(code);
