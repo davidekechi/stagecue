@@ -2,6 +2,7 @@
 // Home: choose a role. A paired phone gets one tap back to its display (pairing persists).
 import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
+import InstallPrompt from '@/components/common/InstallPrompt.vue';
 import { getDb } from '@/storage/db';
 import { DeviceRepo } from '@/storage/DeviceRepo';
 
@@ -30,6 +31,8 @@ onMounted(async () => {
             <RouterLink to="/pair" class="rounded-2xl border-2 border-panel-2 px-5 py-4 text-lg font-semibold" data-testid="home-controller">
                 {{ paired ? 'Pair with a different display' : 'Use this device as the controller' }}
             </RouterLink>
+
+            <InstallPrompt />
         </div>
     </main>
 </template>

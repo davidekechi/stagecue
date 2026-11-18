@@ -4,6 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { guessDeviceName, isIosBrowserTab, isValidCode, normalizeCode, startScanner, tokenFromHash, type ScannerHandle } from '@/control/QrScanner';
 import { pairDevice, pairingErrorMessage } from '@/control/pairDevice';
+import InstallPrompt from '@/components/common/InstallPrompt.vue';
 import { ApiClient, ApiError } from '@/transport/ApiClient';
 import { getDb } from '@/storage/db';
 import { DeviceRepo } from '@/storage/DeviceRepo';
@@ -161,6 +162,8 @@ onBeforeUnmount(closeScanner);
                 </button>
                 <button type="button" class="h-14 rounded-xl border-2 border-panel-2 text-lg font-semibold" data-testid="pair-scan" @click="openScanner">Scan the QR code</button>
             </form>
+
+            <InstallPrompt :ios="false" />
 
             <p v-if="iosTab" class="text-sm leading-relaxed text-muted" data-testid="pair-ios-hint">
                 Opened from the Camera app? This Safari tab is separate from the installed StageCue app. Pair here to control from Safari, or open the StageCue app and scan from there.

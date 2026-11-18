@@ -5,6 +5,7 @@ import { useDisplayStore } from '@/stores/display';
 import { FALLBACK_TEXT, isScreenPickerSupported, listScreens, type ScreenInfo } from '@/display/ScreenPicker';
 import type { ErrorEntry } from '@/storage/MetaRepo';
 import ConnectToTvGuide from './ConnectToTvGuide.vue';
+import InstallPrompt from '@/components/common/InstallPrompt.vue';
 import { applyUpdate, displayCanUpdate, updateAvailable } from '@/pwa';
 
 const props = defineProps<{
@@ -108,6 +109,8 @@ const kb: Array<[string, string]> = [
             <section v-if="warnings.length" class="space-y-2" data-testid="setup-warnings">
                 <p v-for="w in warnings" :key="w" class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">{{ w }}</p>
             </section>
+
+            <InstallPrompt context="display" :ios="false" />
 
             <section aria-labelledby="pair-h">
                 <h3 id="pair-h" class="section-h">Controller</h3>
