@@ -46,6 +46,9 @@ test('OFF-02/08: the display goes offline; the message expires on time, overtime
     await controllerPage.getByTestId('dur-m-down').click({ clickCount: 15 });
     await controllerPage.getByTestId('dur-s-up').click({ clickCount: 8 });
     await controllerPage.getByTestId('btn-display-start').click();
+    // START is only sent after the Display confirms the SET: make sure it is running before the
+    // Display goes offline (an offline Display cannot receive commands — that is the point).
+    await expect(controllerPage.getByTestId('btn-pause')).toBeVisible({ timeout: 10_000 });
     await controllerPage.getByTestId('msg-text').fill('Back in a moment');
     await controllerPage.getByTestId('msgdur-custom').click();
     await controllerPage.getByTestId('msgdur-custom-input').fill('3');
