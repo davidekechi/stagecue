@@ -12,6 +12,8 @@
     <link rel="manifest" href="/build/manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png">
+    {{-- 06-Deployment §4: runtime (not build-time) client config. No secrets. --}}
+    <script id="stagecue-config" type="application/json">{!! json_encode(\App\Support\ClientConfig::forShell(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) !!}</script>
     @vite(['resources/js/main.ts'])
 </head>
 <body>
