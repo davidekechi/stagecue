@@ -243,5 +243,6 @@ export const peerHeartbeatSchema = z.strictObject({
     v: z.literal(1),
     role: z.enum(['display', 'controller']),
     revision: z.number().int().nonnegative().nullable(),
+    presentationId: id.nullable().optional(),
     sentAt: epochMs,
 });

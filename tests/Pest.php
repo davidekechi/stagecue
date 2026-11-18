@@ -62,7 +62,7 @@ function something()
  */
 function createDisplay(string $name = 'Main Hall TV'): array
 {
-    $body = test()->postJson('/api/sessions', ['displayName' => $name])->assertCreated()->json();
+    $body = test()->withoutToken()->postJson('/api/sessions', ['displayName' => $name])->assertCreated()->json();
     app('auth')->forgetGuards();
 
     return [
@@ -83,7 +83,7 @@ function createDisplay(string $name = 'Main Hall TV'): array
  */
 function pairController(array $display, string $deviceName = 'Phone'): array
 {
-    $body = test()->postJson('/api/pairings', ['code' => $display['code'], 'deviceName' => $deviceName])->assertCreated()->json();
+    $body = test()->withoutToken()->postJson('/api/pairings', ['code' => $display['code'], 'deviceName' => $deviceName])->assertCreated()->json();
     app('auth')->forgetGuards();
 
     return ['session' => $body['session']['id'], 'device' => $body['device']['id'], 'token' => $body['token'], 'body' => $body];
