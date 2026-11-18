@@ -10,4 +10,4 @@ app.use(createPinia());
 app.use(createAppRouter());
 app.mount('#app');
 
-registerServiceWorker();
+window.addEventListener('load', () => void registerServiceWorker());

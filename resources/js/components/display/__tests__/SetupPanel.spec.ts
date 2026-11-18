@@ -103,3 +103,22 @@ describe('FullscreenHint', () => {
         expect(fs.find('[data-testid="fullscreen-hint"]').exists()).toBe(false);
     });
 });
+
+describe('SetupPanel update banner (PWA-05)', () => {
+    beforeEach(() => setActivePinia(createPinia()));
+    afterEach(async () => (await import('@/pwa')).resetUpdateState());
+
+    it('offers the update, but only when nothing is running or showing', async () => {
+        const { updateAvailable } = await import('@/pwa');
+        updateAvailable.value = true;
+        const store = useDisplayStore();
+        store.sink.onState({ ...createInitialState('P', 0), timer: { status: 'running', durationMs: 1000, startedAtWall: 0, endsAtWall: 1000 } }, []);
+        const w = mountPanel();
+        expect(w.find('[data-testid="update-banner"]').exists()).toBe(true);
+        expect(w.find('[data-testid="update-apply"]').attributes('disabled')).toBeDefined();
+        expect(w.find('[data-testid="update-wait"]').exists()).toBe(true);
+        store.sink.onState({ ...createInitialState('P', 0), timer: { status: 'paused', durationMs: 1000, remainingMs: 500, pausedAtWall: 0, startedAtWall: 0 } }, []);
+        await w.vm.$nextTick();
+        expect(w.find('[data-testid="update-apply"]').attributes('disabled')).toBeUndefined();
+    });
+});

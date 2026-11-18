@@ -5,6 +5,7 @@ import { useDisplayStore } from '@/stores/display';
 import { FALLBACK_TEXT, isScreenPickerSupported, listScreens, type ScreenInfo } from '@/display/ScreenPicker';
 import type { ErrorEntry } from '@/storage/MetaRepo';
 import ConnectToTvGuide from './ConnectToTvGuide.vue';
+import { applyUpdate, displayCanUpdate, updateAvailable } from '@/pwa';
 
 const props = defineProps<{
     loadErrors: () => Promise<ErrorEntry[]>;
@@ -20,6 +21,7 @@ const confirmingNew = ref(false);
 const errors = ref<ErrorEntry[]>([]);
 const offset = ref(0);
 const pickerSupported = isScreenPickerSupported();
+const canUpdate = computed(() => displayCanUpdate(store.state));
 
 const warnings = computed(() => {
     const list: string[] = [];
@@ -95,6 +97,14 @@ const kb: Array<[string, string]> = [
         </header>
 
         <div class="flex flex-col gap-6 px-5 py-5">
+            <section v-if="updateAvailable" class="rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-3" data-testid="update-banner">
+                <p class="text-sm text-sky-100">A new version of StageCue is ready.</p>
+                <button class="btn-primary mt-2" :disabled="!canUpdate" data-testid="update-apply" @click="applyUpdate()">Update now</button>
+                <p v-if="!canUpdate" class="mt-2 text-xs text-sky-200/80" data-testid="update-wait">
+                    Available when no timer is running and no message is on screen — the presentation is never interrupted.
+                </p>
+            </section>
+
             <section v-if="warnings.length" class="space-y-2" data-testid="setup-warnings">
                 <p v-for="w in warnings" :key="w" class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">{{ w }}</p>
             </section>
@@ -180,7 +190,7 @@ const kb: Array<[string, string]> = [
     @apply rounded-lg border border-white/15 px-3 py-2 text-sm font-medium hover:bg-white/10;
 }
 .btn-primary {
-    @apply rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-neutral-200;
+    @apply rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-neutral-200 disabled:opacity-40;
 }
 .btn-danger {
     @apply border-red-500/60 bg-red-500/15 text-red-200;

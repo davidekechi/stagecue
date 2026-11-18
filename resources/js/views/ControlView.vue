@@ -22,6 +22,7 @@ import { MetaRepo } from '@/storage/MetaRepo';
 import { useControlStore } from '@/stores/control';
 import { ApiClient } from '@/transport/ApiClient';
 import { RealtimeClient, readShellConfig } from '@/transport/RealtimeClient';
+import { applyUpdate, updateAvailable } from '@/pwa';
 
 const store = useControlStore();
 const router = useRouter();
@@ -103,7 +104,15 @@ async function unpair() {
 }
 
 const wake = () => runtime?.wake();
-const onVisibility = () => document.visibilityState === 'visible' && wake();
+/** LLD §4.10: the phone applies an update by itself when it is in the background and idle. */
+function maybeApplyUpdate() {
+    const busy = store.outbox.some((e) => e.status === 'sending' || e.status === 'awaiting');
+    if (updateAvailable.value && !busy && !store.form.text.trim()) applyUpdate();
+}
+const onVisibility = () => {
+    if (document.visibilityState === 'visible') wake();
+    else maybeApplyUpdate();
+};
 
 watch(
     () => store.unpaired,
