@@ -15,7 +15,22 @@ export const routes: RouteRecordRaw[] = [
         },
     },
     { path: '/pair', name: 'pair', component: () => import('./views/PairView.vue') },
-    { path: '/control', name: 'control', component: () => import('./views/ControlView.vue') },
+    {
+        path: '/control',
+        name: 'control',
+        component: () => import('./views/ControlView.vue'),
+        // Needs controller credentials, otherwise pair first.
+        beforeEnter: async () => {
+            try {
+                const { getDb } = await import('./storage/db');
+                const { DeviceRepo } = await import('./storage/DeviceRepo');
+                const creds = await new DeviceRepo(await getDb(), 'controller').get();
+                return creds ? true : { path: '/pair' };
+            } catch {
+                return { path: '/pair' };
+            }
+        },
+    },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('./views/NotFoundView.vue') },
 ];
 

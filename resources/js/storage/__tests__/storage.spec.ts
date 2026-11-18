@@ -79,13 +79,19 @@ describe('ProcessedCommandRepo', () => {
 
 describe('DeviceRepo, DraftRepo, MetaRepo', () => {
     it('keeps device credentials', async () => {
-        const repo = new DeviceRepo(await openStageCueDb());
+        const db = await openStageCueDb();
+        const repo = new DeviceRepo(db, 'display');
         expect(await repo.get()).toBeNull();
         const cred = { role: 'display' as const, deviceId: 'd', sessionId: 's', token: 't', name: 'TV' };
         await repo.set(cred);
         expect(await repo.get()).toEqual(cred);
+        const controller = new DeviceRepo(db, 'controller');
+        expect(await controller.get()).toBeNull(); // roles never see each other's credentials
+        await controller.set({ ...cred, role: 'controller', token: 'c' });
+        expect((await repo.get())?.token).toBe('t');
         await repo.clear();
         expect(await repo.get()).toBeNull();
+        expect((await controller.get())?.token).toBe('c');
     });
 
     it('lists drafts oldest first', async () => {

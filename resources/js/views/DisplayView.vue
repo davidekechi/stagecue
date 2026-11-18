@@ -87,7 +87,7 @@ onMounted(async () => {
         runtime,
         publisher,
         api,
-        devices: new DeviceRepo(db),
+        devices: new DeviceRepo(db, 'display'),
         meta,
         shellConfig,
         makeRealtime: (config, token) => new RealtimeClient({ config, token, onInvalid: (event, issues) => console.warn('[stagecue] dropped invalid', event, issues) }),

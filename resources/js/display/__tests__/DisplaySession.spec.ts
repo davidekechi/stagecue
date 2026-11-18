@@ -40,7 +40,7 @@ function fakeApi(over: Partial<Record<keyof ApiClient, unknown>> = {}) {
 
 async function setup(opts: { api?: ReturnType<typeof fakeApi>; online?: boolean; stored?: boolean } = {}) {
     const db = await openStageCueDb();
-    const devices = new DeviceRepo(db);
+    const devices = new DeviceRepo(db, 'display');
     if (opts.stored) await devices.set({ role: 'display', deviceId: 'D0', sessionId: 'S0', token: 'tok0', name: 'TV' });
     const api = opts.api ?? fakeApi();
     const clock = new FakeClock(T0);

@@ -18,6 +18,16 @@
 @theme {
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
     --color-overtime: #c8102e;
+
+    /* Controller: a stage manager's cue desk. Colour carries status only (cue lights). */
+    --color-desk: #15171d; /* backstage blue-graphite */
+    --color-panel: #1f222b;
+    --color-panel-2: #2a2e39;
+    --color-ink: #eceef2;
+    --color-muted: #8c93a3;
+    --color-standby: #f5a524; /* waiting for the Display */
+    --color-go: #2bd67b; /* confirmed */
+    --color-stage-red: #c8102e; /* blackout, time up, danger */
 }
 
 :root {

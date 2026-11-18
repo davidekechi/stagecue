@@ -35,7 +35,7 @@ export interface Draft {
 export interface StageCueSchema extends DBSchema {
     presentation: { key: string; value: unknown };
     processedCommands: { key: string; value: ProcessedRecord; indexes: { appliedAt: number } };
-    device: { key: string; value: DeviceCredentials };
+    device: { key: string; value: DeviceCredentials }; // key = role (A20)
     drafts: { key: string; value: Draft };
     meta: { key: string; value: unknown };
 }
@@ -64,6 +64,11 @@ let shared: Promise<StageCueDB> | null = null;
 export function getDb(): Promise<StageCueDB> {
     shared ??= openStageCueDb();
     return shared;
+}
+
+/** Test hook: forget the cached connection (each test gets a fresh IndexedDB). */
+export function resetDbCache(): void {
+    shared = null;
 }
 
 /** Best-effort persistent storage (FR-O4). `null` when the API is missing. */
