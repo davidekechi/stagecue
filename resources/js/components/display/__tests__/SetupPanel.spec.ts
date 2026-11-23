@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import SetupPanel from '../SetupPanel.vue';
 import FullscreenHint from '../FullscreenHint.vue';
+import PresentControls from '../PresentControls.vue';
 import { useDisplayStore } from '@/stores/display';
 import { createInitialState } from '@/core/reducer';
 
@@ -25,10 +26,26 @@ describe('SetupPanel', () => {
         expect(w.find('[data-testid="setup-warnings"]').exists()).toBe(false);
     });
 
-    it('emits fullscreen, and asks twice before a new presentation', async () => {
+    it('opens on the Phones tab; tabs switch with a click or the arrow keys', async () => {
         const w = mountPanel();
-        await w.find('[data-testid="setup-fullscreen"]').trigger('click');
-        expect(w.emitted('fullscreen')).toHaveLength(1);
+        const visible = (id: string) => (w.find(`[data-testid="setup-tabpanel-${id}"]`).element as HTMLElement).style.display !== 'none';
+        expect(visible('phones')).toBe(true);
+        expect(visible('timer')).toBe(false);
+        expect(w.find('[data-testid="setup-tab-phones"]').attributes('aria-selected')).toBe('true');
+        await w.find('[data-testid="setup-tab-timer"]').trigger('click');
+        expect(visible('timer')).toBe(true);
+        expect(visible('phones')).toBe(false);
+        expect(w.find('[data-testid="display-timer"]').exists()).toBe(true);
+        await w.find('[role="tablist"]').trigger('keydown', { key: 'ArrowRight' });
+        expect(visible('keys')).toBe(true);
+        await w.find('[role="tablist"]').trigger('keydown', { key: 'ArrowLeft' });
+        await w.find('[role="tablist"]').trigger('keydown', { key: 'ArrowLeft' });
+        expect(visible('phones')).toBe(true);
+    });
+
+    it('asks twice before a new presentation', async () => {
+        const w = mountPanel();
+        await w.find('[data-testid="setup-tab-more"]').trigger('click');
         const btn = w.find('[data-testid="setup-new-presentation"]');
         await btn.trigger('click');
         expect(w.emitted('newPresentation')).toBeUndefined();
@@ -53,31 +70,34 @@ describe('SetupPanel', () => {
         const store = useDisplayStore();
         store.sink.onState({ ...createInitialState('PID', 0), revision: 7 }, []);
         const w = mountPanel();
-        const details = w.find('[data-testid="diagnostics"]');
-        (details.element as HTMLDetailsElement).open = true;
-        await details.trigger('toggle');
+        await w.find('[data-testid="setup-tab-more"]').trigger('click');
         await flushPromises();
+        const details = w.find('[data-testid="diagnostics"]');
         expect(w.find('[data-testid="diag-revision"]').text()).toBe('7');
         expect(details.text()).toContain('-12 ms');
         expect(details.text()).toContain('boom');
     });
 
-    it('can be collapsed and expanded', async () => {
+    it('can be hidden and shown again (v-model:hidden)', async () => {
         const w = mountPanel();
         await w.find('[data-testid="setup-collapse"]').trigger('click');
+        expect(w.emitted('update:hidden')?.[0]).toEqual([true]);
+        await w.setProps({ hidden: true });
         expect(w.find('[data-testid="setup-panel"]').exists()).toBe(false);
         await w.find('[data-testid="setup-expand"]').trigger('click');
-        expect(w.find('[data-testid="setup-panel"]').exists()).toBe(true);
+        expect(w.emitted('update:hidden')?.[1]).toEqual([false]);
     });
 
-    it('lists screens from the Window Management API and falls back on denial', async () => {
+    it('Present controls: fullscreen, and screens from the Window Management API with a fallback on denial', async () => {
         const screen = { label: 'TV', width: 1920, height: 1080, isPrimary: false };
         (window as unknown as { getScreenDetails: unknown }).getScreenDetails = vi.fn(async () => ({ screens: [screen], currentScreen: null }));
-        const w = mountPanel();
+        const w = mount(PresentControls);
+        await w.find('[data-testid="setup-fullscreen"]').trigger('click');
+        expect(w.emitted('fullscreen')).toEqual([[]]);
         await w.find('[data-testid="setup-pick-screen"]').trigger('click');
         await flushPromises();
         await w.find('[data-testid="screen-list"] button').trigger('click');
-        expect(w.emitted('fullscreen')?.[0]).toEqual([screen]);
+        expect(w.emitted('fullscreen')?.[1]).toEqual([screen]);
         (window as unknown as { getScreenDetails: unknown }).getScreenDetails = vi.fn(async () => {
             throw new Error('denied');
         });

@@ -8,6 +8,7 @@ import DevPanel from '@/components/display/DevPanel.vue';
 import FullscreenHint from '@/components/display/FullscreenHint.vue';
 import PairingCard from '@/components/display/PairingCard.vue';
 import SetupPanel from '@/components/display/SetupPanel.vue';
+import PresentControls from '@/components/display/PresentControls.vue';
 import { DisplayRuntime } from '@/display/DisplayRuntime';
 import { DisplaySession } from '@/display/DisplaySession';
 import { SnapshotPublisher } from '@/display/SnapshotPublisher';
@@ -29,6 +30,10 @@ const route = useRoute();
 const devPanel = computed(() => route.query.dev === '1');
 const busy = computed(() => store.lock === 'busy');
 const booted = ref(false);
+/** The setup panel was hidden: the stage fills the window (not fullscreen). */
+const setupHidden = ref(false);
+/** Outside fullscreen the stage shrinks to a 16:9 preview on the right (the same element, never re-mounted). */
+const previewing = computed(() => booted.value && !store.fullscreen && !setupHidden.value);
 
 let runtime: DisplayRuntime | null = null;
 let session: DisplaySession | null = null;
@@ -144,10 +149,12 @@ onBeforeUnmount(() => {
             <p class="text-neutral-400">Only one window can drive the screen. Close this tab, or close the other one and reload.</p>
         </div>
     </main>
-    <main v-else class="fixed inset-0 bg-black" data-testid="display-view" :data-ready="booted ? 'true' : 'false'">
-        <Stage :view="store.view" mode="live" />
+    <main v-else class="fixed inset-0" :class="previewing ? 'bg-neutral-900' : 'bg-black'" data-testid="display-view" :data-ready="booted ? 'true' : 'false'">
+        <div class="stage-frame" :class="{ 'is-preview': previewing }" data-testid="stage-frame">
+            <Stage :view="store.view" mode="live" />
+        </div>
         <template v-if="booted && !store.fullscreen">
-            <SetupPanel :load-errors="loadErrors" :clock-offset="clockOffset" @fullscreen="enterFullscreen" @new-presentation="store.localCommand('PRESENTATION_NEW')">
+            <SetupPanel v-model:hidden="setupHidden" :load-errors="loadErrors" :clock-offset="clockOffset" @new-presentation="store.localCommand('PRESENTATION_NEW')">
                 <template #pairing>
                     <PairingCard
                         :phase="store.phase"
@@ -161,8 +168,50 @@ onBeforeUnmount(() => {
                     />
                 </template>
             </SetupPanel>
+            <aside v-if="!setupHidden" class="preview-column" aria-label="Preview and present" data-testid="preview-column">
+                <div class="preview-slot" aria-hidden="true"></div>
+                <p class="text-xs text-neutral-400">Preview: what the screen shows now.</p>
+                <PresentControls @fullscreen="enterFullscreen" />
+            </aside>
             <FullscreenHint :fullscreen="store.fullscreen" />
         </template>
         <DevPanel v-if="devPanel" />
     </main>
 </template>
+
+<style scoped>
+/* Preview geometry: the right third of the window, with a 24 px gutter. The slot in the column and the
+   fixed stage frame use the same numbers, so the stage sits exactly on the slot without being moved. */
+.stage-frame {
+    --gutter: 24px;
+    position: fixed;
+    inset: 0;
+}
+.stage-frame.is-preview {
+    inset: auto;
+    top: var(--gutter);
+    left: calc(100vw * 2 / 3 + var(--gutter));
+    width: calc(100vw / 3 - 2 * var(--gutter));
+    aspect-ratio: 16 / 9;
+    z-index: 57;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.15), 0 12px 32px rgb(0 0 0 / 0.5);
+}
+.preview-column {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: calc(100vw / 3);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    color: #fff;
+}
+.preview-slot {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    flex: none;
+}
+</style>

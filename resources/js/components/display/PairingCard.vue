@@ -109,11 +109,11 @@ function revoke(target: string) {
 
         <div v-if="pairing" class="space-y-3" data-testid="pairing-secrets">
             <p class="text-sm text-neutral-300">{{ controllers.length ? 'To add another phone, scan or type this code on it:' : 'On your phone, open StageCue → Controller and scan, or type the code.' }}</p>
-            <div class="flex items-start gap-4">
-                <img v-if="qr" :src="qr" alt="Pairing QR code" class="h-32 w-32 rounded-lg bg-white p-1" data-testid="pairing-qr" />
+            <div class="flex items-start gap-6">
+                <img v-if="qr" :src="qr" alt="Pairing QR code" class="h-48 w-48 rounded-lg bg-white p-1.5" data-testid="pairing-qr" />
                 <div class="min-w-0">
-                    <p class="flex gap-1 font-mono text-3xl font-bold tracking-wider text-white" data-testid="pairing-code" :aria-label="`Pairing code ${pairing.code.split('').join(' ')}`">
-                        <span v-for="(c, i) in codeChars" :key="i" class="rounded bg-white/10 px-1.5">{{ c }}</span>
+                    <p class="flex gap-1.5 font-mono text-5xl font-bold tracking-wider text-white" data-testid="pairing-code" :aria-label="`Pairing code ${pairing.code.split('').join(' ')}`">
+                        <span v-for="(c, i) in codeChars" :key="i" class="rounded-md bg-white/10 px-2 py-1">{{ c }}</span>
                     </p>
                     <p class="mt-2 text-xs text-neutral-400 tabular" data-testid="pairing-expiry">Expires in {{ countdown }}</p>
                     <button class="mt-2 rounded-md border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-white/10" data-testid="pairing-regenerate" @click="emit('regenerate')">New code</button>

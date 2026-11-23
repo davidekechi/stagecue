@@ -54,6 +54,7 @@ test.describe('local display (keyboard)', () => {
         const stage = page.getByTestId('stage');
         const timer = page.getByTestId('stage-timer');
         await context.setOffline(true);
+        await page.getByTestId('setup-tab-timer').click();
         const card = page.getByTestId('display-timer');
         await card.getByTestId('dur-m').fill('10');
         await card.getByTestId('dur-m').press('Enter');
@@ -129,3 +130,24 @@ test.describe('local display (keyboard)', () => {
         await expect(page.getByTestId('stage-timer')).toContainText(/\+00:00:0\d/);
     });
 });
+
+test('the setup screen: settings on the left two thirds, a 16:9 preview with Present controls on the right', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/display');
+    await expect(page.getByTestId('display-view')).toHaveAttribute('data-ready', 'true');
+    const panel = (await page.getByTestId('setup-panel').boundingBox())!;
+    const frame = (await page.getByTestId('stage-frame').boundingBox())!;
+    const present = (await page.getByTestId('present-controls').boundingBox())!;
+    expect(panel.x).toBe(0);
+    expect(Math.abs(panel.width - 960)).toBeLessThanOrEqual(1);
+    expect(frame.x).toBeGreaterThanOrEqual(960);
+    expect(Math.abs(frame.width / frame.height - 16 / 9)).toBeLessThan(0.02);
+    expect(present.y).toBeGreaterThan(frame.y + frame.height); // the buttons sit under the preview
+
+    // Hiding the panel gives the stage the whole window; showing it brings the preview back.
+    await page.getByTestId('setup-collapse').click();
+    await expect.poll(async () => (await page.getByTestId('stage-frame').boundingBox())!.width).toBe(1440);
+    await page.getByTestId('setup-expand').click();
+    await expect.poll(async () => (await page.getByTestId('stage-frame').boundingBox())!.width).toBeLessThan(480);
+});
+
