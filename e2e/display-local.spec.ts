@@ -50,6 +50,33 @@ test.describe('local display (keyboard)', () => {
         await expect(page.getByTestId('stage-black')).toBeVisible();
     });
 
+    test('A27 the timer can be set and run from the Display, even offline', async ({ page, context }) => {
+        const stage = page.getByTestId('stage');
+        const timer = page.getByTestId('stage-timer');
+        await context.setOffline(true);
+        const card = page.getByTestId('display-timer');
+        await card.getByTestId('dur-m').fill('10');
+        await card.getByTestId('dur-m').press('Enter');
+        await card.getByTestId('display-timer-set-start').click();
+        await expect(timer).toContainText('09:5', { timeout: 3_000 });
+        await expect(card.getByTestId('display-timer-current')).toContainText('10:00');
+
+        await card.getByTestId('display-timer-run').click();
+        await expect(page.getByTestId('paused-indicator')).toBeVisible();
+        await expect(card.getByTestId('display-timer-run')).toContainText('Resume');
+        await card.getByTestId('display-timer-reset').click();
+        await expect(timer).toHaveText('10:00');
+
+        await card.getByTestId('chip-5').click();
+        await card.getByTestId('display-timer-set').click();
+        await expect(timer).toHaveText('05:00');
+        await expect(page.getByTestId('paused-indicator')).toBeVisible(); // Set does not start
+
+        await card.getByTestId('display-timer-clear').click();
+        await expect(stage).toHaveAttribute('data-kind', 'standby');
+        await context.setOffline(false);
+    });
+
     test('Space starts, pauses and resumes; B blacks out; D dismisses', async ({ page }) => {
         const timer = page.getByTestId('stage-timer');
         await page.getByTestId('dev-set-15m').click();

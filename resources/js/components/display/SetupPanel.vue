@@ -5,6 +5,7 @@ import { useDisplayStore } from '@/stores/display';
 import { FALLBACK_TEXT, isScreenPickerSupported, listScreens, type ScreenInfo } from '@/display/ScreenPicker';
 import type { ErrorEntry } from '@/storage/MetaRepo';
 import ConnectToTvGuide from './ConnectToTvGuide.vue';
+import DisplayTimerCard from './DisplayTimerCard.vue';
 import InstallPrompt from '@/components/common/InstallPrompt.vue';
 import { applyUpdate, displayCanUpdate, updateAvailable } from '@/pwa';
 
@@ -118,6 +119,11 @@ const kb: Array<[string, string]> = [
                 <slot name="pairing">
                     <p class="text-sm text-neutral-400">Pairing appears here when the display is online.</p>
                 </slot>
+            </section>
+
+            <section aria-labelledby="timer-h">
+                <h3 id="timer-h" class="section-h">Timer</h3>
+                <DisplayTimerCard />
             </section>
 
             <section aria-labelledby="present-h">
