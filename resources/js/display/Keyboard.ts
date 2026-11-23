@@ -5,7 +5,7 @@ import type { CommandName, PresentationState, TimerStatus } from '@/core/types';
 export interface KeyboardActions {
     toggleFullscreen(): void;
     toggleBlackout(): void;
-    /** Show / hide the time of day (A23). */
+    /** Show / hide the time of day over everything (A23, A26). */
     toggleClock(): void;
     /** Start / pause / resume depending on the timer state (see `spaceCommand`). */
     startPause(): void;
@@ -107,6 +107,7 @@ export const keyResolvers = {
         return name ? { name } : null;
     },
     reset: (s: PresentationState) => (s.timer.status === 'idle' ? null : { name: 'TIMER_RESET' as CommandName }),
+    clockOff: (s: PresentationState) => (s.display.clock ? { name: 'CLOCK_OFF' as CommandName } : null),
     oneSecond: () => ({ name: 'TIMER_SET' as CommandName, payload: { durationMs: ONE_SECOND_MS } }),
     dismiss: (s: PresentationState) => (s.message.status === 'showing' ? { name: 'MESSAGE_DISMISS' as CommandName, payload: { id: s.message.id } } : null),
 };

@@ -37,20 +37,41 @@ describe('clock mode', () => {
         expect(s.timer).toEqual({ status: 'idle' });
     });
 
-    it('shows the clock only when no timer is set; moves to the corner with a message; blackout wins', () => {
+    it('A26: the clock covers the timer, TIME UP and the black screen; off returns to what was underneath', () => {
         const now = at(14, 45);
-        let s = ok(apply(fresh(), command('CLOCK_ON'), now));
-        expect(deriveView(s, now)).toEqual({ kind: 'clock', text: '02:45:30 PM' });
+        const clockOn = (st: ReturnType<typeof fresh>) => ok(apply(st, command('CLOCK_ON'), now));
+        const clockOff = (st: ReturnType<typeof fresh>) => ok(apply(st, command('CLOCK_OFF'), now));
 
-        const withMsg = ok(apply(s, command('MESSAGE_SHOW', timedMsg(10_000)), now));
-        expect(deriveView(withMsg, now)).toEqual({ kind: 'message', message: { text: 'Please take your seats', corner: 'tr' }, compact: { text: '02:45:30 PM', overtime: false, clock: true } });
+        expect(deriveView(clockOn(fresh()), now)).toEqual({ kind: 'clock', text: '02:45:30 PM' });
 
-        s = ok(apply(s, command('TIMER_SET', { durationMs: 900_000 }), now));
-        expect(deriveView(s, now)).toMatchObject({ kind: 'timer', text: '15:00' }); // a timer takes priority
+        // Counting down underneath: the clock shows; off → the countdown, which kept running.
+        const running = ok(apply(ok(apply(fresh(), command('TIMER_SET', { durationMs: 900_000 }), now)), command('TIMER_START'), now));
+        const covered = clockOn(running);
+        expect(deriveView(covered, now + 60_000).kind).toBe('clock');
+        expect(covered.timer).toEqual(running.timer); // the clock never touches the timer
+        expect(deriveView(clockOff(covered), now + 60_000)).toMatchObject({ kind: 'timer', text: '14:00' });
 
-        const black = ok(apply(ok(apply(fresh(), command('CLOCK_ON'), now)), command('BLACKOUT_ON'), now));
-        expect(deriveView(black, now)).toEqual({ kind: 'black' });
+        // TIME UP underneath.
+        expect(deriveView(covered, now + 960_000).kind).toBe('clock');
+        expect(deriveView(clockOff(covered), now + 960_000).kind).toBe('overtime');
+
+        // Black screen underneath: the clock wins; off → black again.
+        const black = clockOn(ok(apply(fresh(), command('BLACKOUT_ON'), now)));
+        expect(deriveView(black, now).kind).toBe('clock');
+        expect(deriveView(clockOff(black), now)).toEqual({ kind: 'black' });
+
         expect(deriveView(fresh(), now)).toEqual({ kind: 'standby' });
+    });
+
+    it('A26: a message over the clock shows the time in its corner (but not under a black screen)', () => {
+        const now = at(14, 45);
+        const withMsg = ok(apply(ok(apply(fresh(), command('CLOCK_ON'), now)), command('MESSAGE_SHOW', timedMsg(10_000)), now));
+        expect(deriveView(withMsg, now)).toEqual({ kind: 'message', message: { text: 'Please take your seats', corner: 'tr' }, compact: { text: '02:45:30 PM', overtime: false, clock: true } });
+        const withTimer = ok(apply(withMsg, command('TIMER_SET', { durationMs: 900_000 }), now));
+        expect(deriveView(withTimer, now)).toMatchObject({ kind: 'message', compact: { clock: true } });
+        expect(deriveView(ok(apply(withMsg, command('BLACKOUT_ON'), now)), now).kind).toBe('clock');
+        // Clock off: the message with the timer in the corner, as before.
+        expect(deriveView(ok(apply(withTimer, command('CLOCK_OFF'), now)), now)).toMatchObject({ kind: 'message', compact: { text: '15:00', overtime: false } });
     });
 
     it('a new presentation keeps the clock preference', () => {

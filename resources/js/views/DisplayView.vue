@@ -111,7 +111,11 @@ onMounted(async () => {
             startPause: () => void rt.localResolve(keyResolvers.startPause),
             reset: () => void rt.localResolve(keyResolvers.reset),
             dismiss: () => void rt.localResolve(keyResolvers.dismiss),
-            oneSecond: () => void rt.localResolve(keyResolvers.oneSecond),
+            oneSecond: () => {
+                // Tab → 00:01, and show it: the clock (A26) would otherwise cover the timer.
+                void rt.localResolve(keyResolvers.oneSecond);
+                void rt.localResolve(keyResolvers.clockOff);
+            },
         }),
     );
     for (const ev of ['pageshow', 'focus', 'online'] as const) window.addEventListener(ev, wake);

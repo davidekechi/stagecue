@@ -98,7 +98,7 @@ const clockBusy = computed(() => ['sending', 'awaiting'].includes(clockEntry.val
         >
             <span class="flex flex-col">
                 <span class="text-[1.05rem] font-semibold">Show the time</span>
-                <span class="text-sm text-muted">{{ clockBusy ? 'Waiting for the display…' : 'Shown when no timer is set, e.g. 2:45 PM' }}</span>
+                <span class="text-sm text-muted">{{ clockBusy ? 'Waiting for the display…' : 'Covers the screen, even a timer or black screen. Off goes back.' }}</span>
             </span>
             <span class="relative h-8 w-14 shrink-0 rounded-full transition-colors" :class="clock ? 'bg-go' : 'bg-panel-2'" aria-hidden="true">
                 <span class="absolute top-1 h-6 w-6 rounded-full bg-ink transition-[left]" :class="clock ? 'left-7' : 'left-1'"></span>

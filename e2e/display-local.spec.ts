@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { seconds } from './helpers';
 
 // T3.5 — local-only Display: every flow works with the keyboard + dev panel and no backend calls.
 test.describe('local display (keyboard)', () => {
@@ -23,6 +24,30 @@ test.describe('local display (keyboard)', () => {
         await page.keyboard.press('Tab');
         await expect(timer).toHaveText('00:01');
         await expect(page.getByTestId('paused-indicator')).toBeVisible(); // set, not started
+    });
+
+    test('A26 C shows the time over a countdown or the black screen; C again goes back', async ({ page }) => {
+        const stage = page.getByTestId('stage');
+        const timer = page.getByTestId('stage-timer');
+        await page.getByTestId('dev-set-15m').click();
+        await page.keyboard.press('Space');
+        await expect(timer).toContainText('14:5', { timeout: 3_000 });
+
+        const before = seconds((await timer.textContent())!);
+        await page.keyboard.press('c');
+        await expect(stage).toHaveAttribute('data-kind', 'clock');
+        await expect(timer).toHaveText(/(AM|PM)$/);
+        await page.waitForTimeout(2_500);
+        await page.keyboard.press('c');
+        await expect(stage).toHaveAttribute('data-kind', 'timer');
+        expect(seconds((await timer.textContent())!)).toBeLessThanOrEqual(before - 2); // it kept counting underneath
+
+        await page.keyboard.press('b');
+        await expect(page.getByTestId('stage-black')).toBeVisible();
+        await page.keyboard.press('c');
+        await expect(stage).toHaveAttribute('data-kind', 'clock');
+        await page.keyboard.press('c');
+        await expect(page.getByTestId('stage-black')).toBeVisible();
     });
 
     test('Space starts, pauses and resumes; B blacks out; D dismisses', async ({ page }) => {

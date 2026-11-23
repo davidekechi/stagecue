@@ -89,7 +89,7 @@ describe('Keyboard', () => {
         expect(actions.oneSecond).not.toHaveBeenCalled();
     });
 
-    it('Tab → 00:01 from any timer state, and replaces the clock on the stage', () => {
+    it('Tab → 00:01 from any timer state, and shows it even over the clock', () => {
         const T = new Date(2026, 10, 18, 14, 45, 30).getTime();
         let s = createInitialState('P', T);
         s = { ...s, display: { blackout: false, clock: true } };
@@ -101,10 +101,13 @@ describe('Keyboard', () => {
         ]) {
             const r = apply({ ...s, timer } as typeof s, command(keyResolvers.oneSecond().name, keyResolvers.oneSecond().payload), T);
             expect(r.ok).toBe(true);
-            const next = (r as { state: typeof s }).state;
+            let next = (r as { state: typeof s }).state;
             expect(next.timer).toEqual({ status: 'ready', durationMs: 1000 });
+            // A26: the clock covers the timer, so Tab also turns it off.
+            const off = keyResolvers.clockOff(next)!;
+            next = (apply(next, command(off.name), T) as { state: typeof s }).state;
             expect(deriveView(next, T)).toMatchObject({ kind: 'timer', text: '00:01' });
-            expect(next.display.clock).toBe(true); // clearing the timer brings the clock back
+            expect(keyResolvers.clockOff(next)).toBeNull();
         }
     });
 });

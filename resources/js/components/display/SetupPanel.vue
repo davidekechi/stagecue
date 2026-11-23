@@ -64,7 +64,7 @@ function keepFocus(e: MouseEvent) {
 const kb: Array<[string, string]> = [
     ['F', 'Fullscreen on / off'],
     ['B', 'Black screen on / off'],
-    ['C', 'Clock on / off (when no timer is set)'],
+    ['C', 'Show the time over everything / back'],
     ['Tab', 'Set the timer to 00:01'],
     ['Space', 'Start · pause · resume'],
     ['R R', 'Reset (press twice)'],
