@@ -37,8 +37,8 @@ test('without Reverb: pair/unpair appear automatically, statuses explain, and it
 
     // Kill Reverb again, then unpair from the display: the phone notices over HTTP.
     servers.killReverb();
-    await displayPage.getByTestId('pairing-revoke').click();
-    await displayPage.getByTestId('pairing-revoke').click();
+    await displayPage.getByTestId('pairing-revoke-one').first().click();
+    await displayPage.getByTestId('pairing-revoke-one').first().click();
     await expect(displayPage.getByTestId('controller-connected')).toHaveCount(0, { timeout: 5_000 });
     await expect(controllerPage.getByTestId('pair-reason')).toContainText('unpaired this phone', { timeout: 15_000 });
 });

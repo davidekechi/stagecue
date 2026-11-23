@@ -18,6 +18,8 @@ return [
     'registration' => env('STAGECUE_REGISTRATION', 'open'),
     // A24: the Sign up page is hidden (`/signup` and `?mode=register` go to Log in) unless this is `shown`.
     'signup_page' => env('STAGECUE_SIGNUP_PAGE', 'hidden'),
+    // A28: how many phones may be paired with one Display at once.
+    'max_controllers' => (int) env('STAGECUE_MAX_CONTROLLERS', 5),
     'account_token_days' => 90,
 
     // LLD §7.3 rate limits (per minute unless noted).

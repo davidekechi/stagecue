@@ -52,6 +52,7 @@ Cloud injects `DB_*` and `REVERB_*` when the resources are attached ⚠ (write d
 | `STAGECUE_HEARTBEAT_MODE` | from §5 (`whisper` or `http`) | same |
 | `STAGECUE_REGISTRATION` | `open` until your team's account exists, then `closed` (A24) | `open` |
 | `STAGECUE_SIGNUP_PAGE` | `hidden` (default). Set `shown` and redeploy to offer the Sign up page again (A24) | `hidden` |
+| `STAGECUE_MAX_CONTROLLERS` | phones per display (A28), default `5` | `5` |
 | `STAGECUE_REVERB_CLIENT_HOST/PORT/SCHEME` | only if the browser must use a different WebSocket host than `REVERB_HOST` | |
 
 `APP_URL` builds the QR pairing link, so it must be the public `https://…laravel.cloud` hostname. **Treat the production hostname as permanent** (installed apps and saved state are tied to it — A11).

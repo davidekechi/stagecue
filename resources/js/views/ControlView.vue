@@ -160,7 +160,10 @@ onBeforeUnmount(() => {
             <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
                     <p class="truncate text-lg font-bold leading-tight" data-testid="control-session">{{ store.session?.sessionName ?? 'StageCue' }}</p>
-                    <p class="truncate text-xs text-muted">This phone: {{ store.session?.deviceName ?? '…' }}</p>
+                    <p class="truncate text-xs text-muted">
+                        This phone: {{ store.session?.deviceName ?? '…' }}
+                        <span v-if="(store.session?.phones ?? 0) > 1" data-testid="control-phones">· {{ store.session!.phones }} phones can control this display</span>
+                    </p>
                 </div>
                 <div class="relative">
                     <button type="button" class="flex h-12 w-12 items-center justify-center rounded-xl text-2xl text-muted" aria-label="Menu" :aria-expanded="menuOpen" data-testid="control-menu" @click="menuOpen = !menuOpen">⋯</button>

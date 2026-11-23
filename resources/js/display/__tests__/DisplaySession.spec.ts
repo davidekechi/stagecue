@@ -57,7 +57,7 @@ async function setup(opts: { api?: ReturnType<typeof fakeApi>; online?: boolean;
     });
     await runtime.boot();
     const echo = new FakeEcho();
-    const sink: DisplaySessionSink = { onPhase: vi.fn(), onSession: vi.fn(), onPairing: vi.fn(), onController: vi.fn(), onConnection: vi.fn(), onSocket: vi.fn() };
+    const sink: DisplaySessionSink = { onPhase: vi.fn(), onSession: vi.fn(), onPairing: vi.fn(), onControllers: vi.fn(), onConnection: vi.fn(), onSocket: vi.fn() };
     const timers: Array<{ fn: () => void; ms: number }> = [];
     const session = (ref.session = new DisplaySession({
         runtime,
@@ -103,12 +103,12 @@ describe('DisplaySession', () => {
         session.stop();
     });
 
-    it('resumes with a paired controller without regenerating', async () => {
+    it('A28: resumes with a paired phone and still offers a fresh code for another one', async () => {
         const api = fakeApi({ getSession: vi.fn(async () => ({ session: { id: 'S0', displayName: 'TV', status: 'active' }, device: { id: 'D0', role: 'display' }, controller: { id: 'C', name: 'Phone', pairedAt: T0 }, pairing: null, realtime, serverTime: T0 })) });
         const { session, sink } = await setup({ api, stored: true });
         await session.start();
-        expect(sink.onController).toHaveBeenLastCalledWith({ id: 'C', name: 'Phone' });
-        expect(api.regeneratePairing).not.toHaveBeenCalled();
+        expect(sink.onControllers).toHaveBeenLastCalledWith([{ id: 'C', name: 'Phone', online: false }]);
+        expect(api.regeneratePairing).toHaveBeenCalledWith('S0');
         session.stop();
     });
 
@@ -152,11 +152,45 @@ describe('DisplaySession', () => {
         expect(runtime.state.display.blackout).toBe(true);
 
         ch.emit('.controller.paired', fixture('event.controller-paired'));
-        expect(sink.onController).toHaveBeenLastCalledWith({ id: '01JD3R0000000000000000CTR1', name: "Dave's iPhone" });
+        expect(sink.onControllers).toHaveBeenLastCalledWith([{ id: '01JD3R0000000000000000CTR1', name: "Dave's iPhone", online: false }]);
         expect(api.regeneratePairing).toHaveBeenCalledTimes(1);
         ch.emit('.controller.revoked', fixture('event.controller-revoked'));
-        expect(sink.onController).toHaveBeenLastCalledWith(null);
-        expect(api.regeneratePairing).toHaveBeenCalledTimes(2);
+        expect(sink.onControllers).toHaveBeenLastCalledWith([]);
+        expect(api.regeneratePairing).toHaveBeenCalledTimes(1); // a code is already on offer (A28)
+        session.stop();
+    });
+
+    it('A28: tracks several phones, who is online, and unpairs one at a time', async () => {
+        const api = fakeApi({ revokeControllerDevice: vi.fn(async () => undefined) });
+        const { session, sink, echo } = await setup({ api });
+        await session.start();
+        const ch = echo.channels.get('private-session.S1.display')!;
+        ch.emit('.controller.paired', { v: 1, deviceId: 'CA', name: 'Ada', pairedAt: T0 });
+        ch.emit('.controller.paired', { v: 1, deviceId: 'CB', name: 'Ben', pairedAt: T0 });
+        ch.emit('.controller.paired', { v: 1, deviceId: 'CB', name: 'Ben', pairedAt: T0 }); // duplicate event
+        expect(sink.onControllers).toHaveBeenLastCalledWith([
+            { id: 'CA', name: 'Ada', online: false },
+            { id: 'CB', name: 'Ben', online: false },
+        ]);
+
+        const presence = echo.channels.get('presence-session.S1')!;
+        presence.hereCb?.([{ id: 'D1', role: 'display', name: 'TV' }, { id: 'CB', role: 'controller', name: 'Ben' }]);
+        expect(sink.onControllers).toHaveBeenLastCalledWith([
+            { id: 'CA', name: 'Ada', online: false },
+            { id: 'CB', name: 'Ben', online: true },
+        ]);
+        presence.joiningCb?.({ id: 'CA', role: 'controller', name: 'Ada' });
+        presence.leavingCb?.({ id: 'CB', role: 'controller', name: 'Ben' });
+        expect(sink.onControllers).toHaveBeenLastCalledWith([
+            { id: 'CA', name: 'Ada', online: true },
+            { id: 'CB', name: 'Ben', online: false },
+        ]);
+
+        await session.revokeController('CA');
+        expect(api.revokeControllerDevice).toHaveBeenCalledWith('S1', 'CA');
+        expect(sink.onControllers).toHaveBeenLastCalledWith([{ id: 'CB', name: 'Ben', online: false }]);
+        ch.emit('.controller.revoked', { v: 1, deviceId: 'CB', reason: 'left' });
+        expect(sink.onControllers).toHaveBeenLastCalledWith([]);
         session.stop();
     });
 
@@ -187,7 +221,7 @@ describe('DisplaySession', () => {
         await session.start();
         await session.revokeController();
         expect(api.revokeController).toHaveBeenCalledWith('S1');
-        expect(sink.onController).toHaveBeenLastCalledWith(null);
+        expect(sink.onControllers).toHaveBeenLastCalledWith([]);
         expect(sink.onPairing).toHaveBeenLastCalledWith(expect.objectContaining({ code: 'NEW234' }));
         session.stop();
     });
@@ -212,10 +246,10 @@ describe('DisplaySession without the live channel (A22)', () => {
         await ctx.session.start(); // the fake socket stays "connecting" — never connected
         controller = { id: 'C9', name: 'Phone', pairedAt: T0 };
         intervals.forEach((fn) => fn());
-        await vi.waitFor(() => expect(ctx.sink.onController).toHaveBeenLastCalledWith({ id: 'C9', name: 'Phone' }));
+        await vi.waitFor(() => expect(ctx.sink.onControllers).toHaveBeenLastCalledWith([{ id: 'C9', name: 'Phone', online: false }]));
         controller = null;
         intervals.forEach((fn) => fn());
-        await vi.waitFor(() => expect(ctx.sink.onController).toHaveBeenLastCalledWith(null));
+        await vi.waitFor(() => expect(ctx.sink.onControllers).toHaveBeenLastCalledWith([]));
         ctx.session.stop();
     });
 });

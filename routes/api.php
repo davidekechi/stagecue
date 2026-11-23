@@ -25,7 +25,8 @@ Route::middleware(['auth:sanctum', 'session.member'])->prefix('/sessions/{sessio
     Route::get('/state', [SnapshotController::class, 'show']);
     Route::delete('/', [SessionController::class, 'destroy'])->middleware('ability:display');
     Route::post('/pairing/regenerate', [PairingController::class, 'regenerate'])->middleware('ability:display');
-    Route::delete('/controller', [PairingController::class, 'revoke'])->middleware('ability:display');
+    Route::delete('/controller', [PairingController::class, 'revoke'])->middleware('ability:display'); // all phones
+    Route::delete('/controllers/{device}', [PairingController::class, 'revokeOne'])->middleware('ability:display'); // A28: one phone
     Route::delete('/controller/self', [PairingController::class, 'leave'])->middleware('ability:controller');
     Route::post('/commands', [CommandController::class, 'store'])->middleware(['ability:controller', 'throttle:commands']);
     Route::post('/snapshots', [SnapshotController::class, 'store'])->middleware(['ability:display', 'throttle:snapshots']);

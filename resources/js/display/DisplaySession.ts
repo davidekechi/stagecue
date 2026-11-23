@@ -24,6 +24,8 @@ export interface DisplayPairing {
 export interface DisplayController {
     id: string;
     name: string;
+    /** A28: in the session's presence channel right now (the app is open and connected). */
+    online?: boolean;
 }
 
 export type SessionPhase = 'offline' | 'connecting' | 'ready' | 'error';
@@ -32,7 +34,8 @@ export interface DisplaySessionSink {
     onPhase(phase: SessionPhase, detail?: string): void;
     onSession(info: { sessionId: string; displayName: string } | null): void;
     onPairing(p: DisplayPairing | null): void;
-    onController(c: DisplayController | null): void;
+    /** A28: every paired phone, oldest first (empty when none). */
+    onControllers(list: DisplayController[]): void;
     onConnection(s: ConnectionStatus): void;
     onSocket?(s: SocketState): void;
 }
@@ -59,12 +62,20 @@ export interface DisplaySessionDeps {
     clearInterval?: (h: unknown) => void;
 }
 
+/** A28: the paired phones from GET /sessions/{sid} (older servers send only `controller`). */
+function controllersOf(info: { controller: { id: string; name: string } | null; controllers?: Array<{ id: string; name: string }> }): DisplayController[] {
+    const list = info.controllers ?? (info.controller ? [info.controller] : []);
+    return list.map((c) => ({ id: c.id, name: c.name }));
+}
+
 export class DisplaySession {
     private creds: DeviceCredentials | null = null;
     private rt: RealtimeClient | null = null;
     private heartbeat: Heartbeat | null = null;
     private csm: ConnectionStateMachine | null = null;
-    private controller: DisplayController | null = null;
+    private controllers: DisplayController[] = [];
+    /** Device ids currently in the presence channel. */
+    private present = new Set<string>();
     private pairing: DisplayPairing | null = null;
     private cleanups: Array<() => void> = [];
     private timers = new Set<unknown>();
@@ -125,12 +136,18 @@ export class DisplaySession {
         }
     }
 
-    async revokeController(): Promise<void> {
+    /** Unpairs one phone (A28), or every phone when no id is given. */
+    async revokeController(deviceId?: string): Promise<void> {
         const sid = this.sessionId;
         if (!sid) return;
         try {
-            await this.deps.api.revokeController(sid);
-            this.setController(null);
+            if (deviceId) {
+                await this.deps.api.revokeControllerDevice(sid, deviceId);
+                this.setControllers(this.controllers.filter((c) => c.id !== deviceId));
+            } else {
+                await this.deps.api.revokeController(sid);
+                this.setControllers([]);
+            }
             await this.regeneratePairing();
         } catch (error) {
             this.handleError(error);
@@ -156,10 +173,10 @@ export class DisplaySession {
                     const account = this.deps.account?.();
                     if (account && info.session.accountId !== account.id) throw new ApiError(403, 'ACCOUNT_MISMATCH', 'Session belongs to another account', false);
                     config = info.realtime;
-                    this.setController(info.controller ? { id: info.controller.id, name: info.controller.name } : null);
+                    this.setControllers(controllersOf(info));
                     this.deps.sink.onSession({ sessionId: info.session.id, displayName: info.session.displayName });
-                    if (!info.controller) await this.regeneratePairing(); // only a fresh code comes with a QR token
-                    else this.setPairing(null);
+                    // A28: a code (with its QR, which only a fresh code has) is always on offer for another phone.
+                    await this.regeneratePairing();
                 } catch (error) {
                     // 401/403/404/410: the session is gone. Start a new one and KEEP the local presentation state.
                     if (!(error instanceof ApiError && error.isAuthLoss)) throw error;
@@ -172,7 +189,7 @@ export class DisplaySession {
                 this.creds = { role: 'display', deviceId: created.device.id, sessionId: created.session.id, token: created.token, name: created.session.displayName, sessionName: created.session.displayName };
                 await this.deps.devices.set(this.creds).catch(() => undefined);
                 config = created.realtime;
-                this.setController(null);
+                this.setControllers([]);
                 this.setPairing(created.pairing);
                 this.deps.sink.onSession({ sessionId: created.session.id, displayName: created.session.displayName });
             }
@@ -214,7 +231,7 @@ export class DisplaySession {
         });
         this.heartbeat = heartbeat;
         const csm = new ConnectionStateMachine({
-            peerAgeMs: () => (this.controller ? heartbeat.peerAgeMs() : Infinity),
+            peerAgeMs: () => (this.controllers.length ? heartbeat.peerAgeMs() : Infinity),
             lostAfterMs: heartbeat.lostAfterMs,
             online: this.deps.online,
             onChange: (s) => this.deps.sink.onConnection(s),
@@ -236,16 +253,13 @@ export class DisplaySession {
             rt.subscribeDisplay(sid, {
                 command: (env) => void this.deps.runtime.handleRemote(env),
                 controllerPaired: (p) => {
-                    this.setController({ id: p.deviceId, name: p.name });
+                    if (!this.controllers.some((c) => c.id === p.deviceId)) this.setControllers([...this.controllers, { id: p.deviceId, name: p.name }]);
                     heartbeat.seen();
                     // D11/HLD §12: the used code is gone; a fresh one is shown for re-pairing.
                     void this.regeneratePairing();
                 },
                 controllerRevoked: (p) => {
-                    if (this.controller?.id === p.deviceId) {
-                        this.setController(null);
-                        void this.regeneratePairing();
-                    }
+                    if (this.controllers.some((c) => c.id === p.deviceId)) this.setControllers(this.controllers.filter((c) => c.id !== p.deviceId));
                 },
                 sessionEnded: () => void this.restart(),
                 peerHeartbeat: (p) => heartbeat.receive({ role: p.role, revision: p.revision, presentationId: p.presentationId ?? null, sentAt: p.sentAt }),
@@ -254,10 +268,18 @@ export class DisplaySession {
             }),
             rt.joinPresence(sid, {
                 here: (members) => {
-                    if (members.some((m) => m.role === 'controller')) heartbeat.seen();
+                    this.present = new Set(members.filter((m) => m.role === 'controller').map((m) => m.id));
+                    if (this.present.size) heartbeat.seen();
+                    this.setControllers(this.controllers);
                 },
                 joining: (m) => {
-                    if (m.role === 'controller') heartbeat.seen();
+                    if (m.role !== 'controller') return;
+                    this.present.add(m.id);
+                    heartbeat.seen();
+                    this.setControllers(this.controllers);
+                },
+                leaving: (m) => {
+                    if (this.present.delete(m.id)) this.setControllers(this.controllers);
                 },
                 heartbeat: (p) => heartbeat.receive({ role: p.role, revision: p.revision, presentationId: p.presentationId, sentAt: p.sentAt }),
             }),
@@ -275,7 +297,7 @@ export class DisplaySession {
         // (A17: a consumed or rotated code is noticed).
         const poll = this.si(() => {
             const now = (this.deps.monoNow ?? (() => performance.now()))();
-            const due = this.socket !== 'connected' || (!this.controller && now - this.lastPoll >= PAIRING_POLL_MS);
+            const due = this.socket !== 'connected' || now - this.lastPoll >= PAIRING_POLL_MS;
             if (due) void this.refreshSession();
         }, FALLBACK_POLL_MS);
         this.intervals.add(poll);
@@ -288,16 +310,13 @@ export class DisplaySession {
         this.lastPoll = (this.deps.monoNow ?? (() => performance.now()))();
         try {
             const info = await this.deps.api.getSession(sid);
-            const c = info.controller ? { id: info.controller.id, name: info.controller.name } : null;
-            if (c?.id !== this.controller?.id) {
-                this.setController(c);
-                if (c) this.heartbeat?.seen();
+            const list = controllersOf(info);
+            const ids = (l: DisplayController[]) => l.map((c) => c.id).join(',');
+            if (ids(list) !== ids(this.controllers)) {
+                if (list.some((c) => !this.controllers.some((o) => o.id === c.id))) this.heartbeat?.seen();
+                this.setControllers(list);
             }
-            if (c) {
-                if (this.pairing && !this.pairing.url) this.setPairing(null);
-            } else if (!info.pairing || info.pairing.code !== this.pairing?.code) {
-                await this.regeneratePairing();
-            }
+            if (!info.pairing || info.pairing.code !== this.pairing?.code) await this.regeneratePairing();
         } catch (error) {
             this.handleError(error);
         }
@@ -306,7 +325,7 @@ export class DisplaySession {
     private async restart(): Promise<void> {
         this.teardown();
         this.creds = null;
-        this.setController(null);
+        this.setControllers([]);
         this.setPairing(null);
         this.deps.sink.onSession(null);
         await this.deps.devices.clear().catch(() => undefined);
@@ -321,19 +340,19 @@ export class DisplaySession {
     private setPairing(p: PairingInfo | null): void {
         this.pairing = p ? { code: p.code, url: p.url ?? null, expiresAt: p.expiresAt } : null;
         this.deps.sink.onPairing(this.pairing);
-        if (this.pairing && !this.controller) {
+        if (this.pairing) {
             const ms = Math.max(1_000, this.pairing.expiresAt - (this.deps.wallNow ?? Date.now)());
             const code = this.pairing.code;
-            // Auto-regenerate on expiry while no controller is paired (T6.6).
+            // Auto-regenerate on expiry (T6.6), so another phone can always be added (A28).
             this.schedule(() => {
-                if (!this.controller && this.pairing?.code === code) void this.regeneratePairing();
+                if (this.pairing?.code === code) void this.regeneratePairing();
             }, ms);
         }
     }
 
-    private setController(c: DisplayController | null): void {
-        this.controller = c;
-        this.deps.sink.onController(c);
+    private setControllers(list: DisplayController[]): void {
+        this.controllers = list.map((c) => ({ id: c.id, name: c.name, online: this.present.has(c.id) }));
+        this.deps.sink.onControllers(this.controllers);
         this.csm?.evaluate();
     }
 

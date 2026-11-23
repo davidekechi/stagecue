@@ -50,8 +50,8 @@ test('E2E-11 hold for black screen, then restore', async ({ displayPage, control
 test('E2E-18 revoking the controller from the display sends the phone to /pair', async ({ displayPage, controllerPage }) => {
     const code = await openDisplay(displayPage);
     await pairPhone(controllerPage, code);
-    await displayPage.getByTestId('pairing-revoke').click();
-    await displayPage.getByTestId('pairing-revoke').click();
+    await displayPage.getByTestId('pairing-revoke-one').first().click();
+    await displayPage.getByTestId('pairing-revoke-one').first().click();
     await expect(controllerPage.getByTestId('pair-view')).toBeVisible({ timeout: 10_000 });
     await expect(controllerPage.getByTestId('pair-reason')).toContainText('unpaired this phone');
 });

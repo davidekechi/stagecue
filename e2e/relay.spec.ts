@@ -45,8 +45,8 @@ test('revoking the controller from the display invalidates its token', async ({ 
     const code = await openDisplay(page);
     const ctrl = await pairByApi(request, code);
     await expect(page.getByTestId('controller-connected')).toBeVisible({ timeout: 10_000 });
-    await page.getByTestId('pairing-revoke').click();
-    await page.getByTestId('pairing-revoke').click();
+    await page.getByTestId('pairing-revoke-one').first().click();
+    await page.getByTestId('pairing-revoke-one').first().click();
     await expect(page.getByTestId('controller-connected')).toHaveCount(0, { timeout: 5_000 });
     expect((await ctrl.send('TIMER_START')).status).toBe(401);
 });

@@ -52,6 +52,18 @@ class PairingController
         return response()->noContent();
     }
 
+    /** DELETE /sessions/{sid}/controllers/{device} (A28) — the Display unpairs one phone. */
+    public function revokeOne(PresentationSession $session, string $device): Response
+    {
+        $phone = $session->devices()->where('role', Device::ROLE_CONTROLLER)->whereNull('revoked_at')->whereKey($device)->first();
+        if (! $phone) {
+            return response()->noContent(); // already unpaired: idempotent
+        }
+        $this->pairing->revokeController($session, 'revoked_by_display', $phone);
+
+        return response()->noContent();
+    }
+
     /** DELETE /sessions/{sid}/controller/self (04 §1.6) */
     public function leave(Request $request, PresentationSession $session): Response
     {

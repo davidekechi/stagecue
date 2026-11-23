@@ -23,7 +23,8 @@ export interface ControllerSink {
     onMirror(m: Mirror | null): void;
     onOutbox(entries: PendingCommand[]): void;
     onConnection(s: ConnectionStatus): void;
-    onSession(info: { sessionName: string; deviceName: string }): void;
+    /** `phones`: how many phones are paired with the display, this one included (A28), when known. */
+    onSession(info: { sessionName: string; deviceName: string; phones?: number }): void;
     onUnpaired(reason: UnpairReason): void;
     onSocket?(s: SocketState): void;
     /** T8.2 — STALE_VIEW: the display changed under the operator; ask before re-sending. */
@@ -130,7 +131,7 @@ export class ControllerRuntime {
             const info = await this.deps.api.getSession(this.creds.sessionId);
             config = info.realtime;
             this.setReachable(true);
-            this.deps.sink.onSession({ sessionName: info.session.displayName, deviceName: this.creds.name });
+            this.deps.sink.onSession({ sessionName: info.session.displayName, deviceName: this.creds.name, phones: info.controllers?.length });
         } catch (error) {
             if (error instanceof ApiError && error.isAuthLoss) return this.lostPairing(error.status === 410 ? 'ended' : 'revoked');
             this.setReachable(false);

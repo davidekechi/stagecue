@@ -6,7 +6,7 @@ const T0 = 1_794_660_000_000;
 const base = {
     phase: 'ready' as const,
     pairing: { code: '7KQ2MX', url: 'https://app.test/pair#t=abc', expiresAt: T0 + 125_000 },
-    controller: null,
+    controllers: [],
     connection: { server: 'online' as const, peer: 'disconnected' as const },
     now: () => T0,
 };
@@ -24,19 +24,36 @@ describe('PairingCard', () => {
     });
 
     it('emits regenerate and asks before revoking', async () => {
-        const w = mount(PairingCard, { props: { ...base, controller: { id: 'c', name: "Dave's iPhone" } } });
+        const w = mount(PairingCard, { props: { ...base, controllers: [{ id: 'c', name: "Dave's iPhone" }] } });
         expect(w.find('[data-testid="controller-connected"]').text()).toContain("Paired with Dave's iPhone");
         await w.find('[data-testid="pairing-regenerate"]').trigger('click');
         expect(w.emitted('regenerate')).toHaveLength(1);
-        await w.find('[data-testid="pairing-revoke"]').trigger('click');
+        expect(w.find('[data-testid="pairing-revoke"]').exists()).toBe(false); // "Unpair all" only with 2+ phones
+        await w.find('[data-testid="pairing-revoke-one"]').trigger('click');
         expect(w.emitted('revoke')).toBeUndefined();
-        await w.find('[data-testid="pairing-revoke"]').trigger('click');
-        expect(w.emitted('revoke')).toHaveLength(1);
+        await w.find('[data-testid="pairing-revoke-one"]').trigger('click');
+        expect(w.emitted('revoke')).toEqual([['c']]);
     });
 
     it('explains offline and error phases', () => {
         expect(mount(PairingCard, { props: { ...base, phase: 'offline', pairing: null } }).find('[data-testid="pairing-offline"]').exists()).toBe(true);
         expect(mount(PairingCard, { props: { ...base, phase: 'error', pairing: null } }).find('[data-testid="pairing-error"]').exists()).toBe(true);
         expect(mount(PairingCard, { props: { ...base, pairing: null } }).find('[data-testid="pairing-secrets"]').exists()).toBe(false);
+    });
+
+    it('A28: lists several phones with their status; unpairs one, or all after a confirm', async () => {
+        const w = mount(PairingCard, {
+            props: { ...base, controllers: [{ id: 'a', name: 'Ada', online: true }, { id: 'b', name: 'Ben', online: false }] },
+        });
+        expect(w.find('[data-testid="controller-connected"]').text()).toContain('Paired with 2 phones');
+        const items = w.findAll('[data-testid="controller-item"]');
+        expect(items.map((i) => i.attributes('data-online'))).toEqual(['true', 'false']);
+        expect(items[1]!.text()).toContain('not connected');
+        await items[1]!.find('[data-testid="pairing-revoke-one"]').trigger('click');
+        await items[1]!.find('[data-testid="pairing-revoke-one"]').trigger('click');
+        expect(w.emitted('revoke')).toEqual([['b']]);
+        await w.find('[data-testid="pairing-revoke"]').trigger('click');
+        await w.find('[data-testid="pairing-revoke"]').trigger('click');
+        expect(w.emitted('revoke')).toEqual([['b'], [undefined]]);
     });
 });

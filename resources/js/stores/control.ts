@@ -22,7 +22,7 @@ export const useControlStore = defineStore('control', () => {
     const mirror = shallowRef<Mirror | null>(null);
     const outbox = shallowRef<PendingCommand[]>([]);
     const connection = ref<ConnectionStatus>({ server: 'offline', peer: 'disconnected' });
-    const session = ref<{ sessionName: string; deviceName: string } | null>(null);
+    const session = ref<{ sessionName: string; deviceName: string; phones?: number } | null>(null);
     const unpaired = ref<UnpairReason | null>(null);
     const drafts = shallowRef<Draft[]>([]);
     const conflict = shallowRef<Conflict | null>(null);

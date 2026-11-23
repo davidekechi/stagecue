@@ -6,6 +6,7 @@ use App\Modules\Relay\Events\ControllerRevoked;
 use App\Modules\Sessions\Models\PresentationSession;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 beforeEach(fn () => RateLimiter::clear('pairing-min:127.0.0.1'));
 
@@ -46,17 +47,61 @@ it('BE-03 an expired pairing → 410', function () {
     asDevice(accountToken())->postJson('/api/pairings', ['code' => $d['code'], 'deviceName' => 'p'])->assertStatus(410)->assertJsonPath('error.code', 'PAIRING_EXPIRED');
 });
 
-it('BE-04 a new pairing replaces the previous controller', function () {
+it('BE-04 / A28 a new pairing keeps the phones already paired', function () {
     Event::fake([ControllerPaired::class, ControllerRevoked::class]);
     $d = createDisplay();
-    $old = pairController($d);
+    $first = pairController($d);
     $code = asDevice($d['token'])->postJson("/api/sessions/{$d['session']}/pairing/regenerate")->assertOk()->json('pairing.code');
-    $new = pairController(['code' => $code, 'account' => $d['account']]);
+    $second = pairController(['code' => $code, 'account' => $d['account']], 'Second phone');
 
-    asDevice($old['token'])->getJson("/api/sessions/{$d['session']}")->assertUnauthorized();
-    asDevice($new['token'])->getJson("/api/sessions/{$d['session']}")->assertOk();
-    Event::assertDispatched(ControllerRevoked::class, fn ($e) => $e->deviceId === $old['device'] && $e->reason === 'replaced');
-    expect(PresentationSession::find($d['session'])->activeController->id)->toBe($new['device']);
+    asDevice($first['token'])->getJson("/api/sessions/{$d['session']}")->assertOk();
+    asDevice($second['token'])->getJson("/api/sessions/{$d['session']}")->assertOk();
+    Event::assertNotDispatched(ControllerRevoked::class);
+    Event::assertDispatchedTimes(ControllerPaired::class, 2);
+
+    $info = asDevice($d['token'])->getJson("/api/sessions/{$d['session']}")->assertOk()->json();
+    expect(array_column($info['controllers'], 'id'))->toBe([$first['device'], $second['device']]);
+    expect($info['controllers'][1])->toHaveKeys(['id', 'name', 'pairedAt', 'lastSeenAt']);
+    expect($info['controller']['id'])->toBe($second['device']); // older clients: the latest phone
+
+    // Both phones can send commands.
+    foreach ([$first, $second] as $phone) {
+        asDevice($phone['token'])->postJson("/api/sessions/{$d['session']}/commands", [
+            'v' => 1, 'commandId' => (string) Str::uuid7(), 'name' => 'TIMER_SET', 'baseRevision' => null, 'issuedAt' => now()->getTimestampMs(), 'payload' => ['durationMs' => 60000],
+        ])->assertSuccessful();
+    }
+});
+
+it('A28 limits how many phones can be paired, without using up the code', function () {
+    config(['stagecue.max_controllers' => 2]);
+    $d = createDisplay();
+    $regen = fn () => asDevice($d['token'])->postJson("/api/sessions/{$d['session']}/pairing/regenerate")->assertOk()->json('pairing.code');
+    pairController($d);
+    pairController(['code' => $regen(), 'account' => $d['account']]);
+    $code = $regen();
+    asDevice($d['account'])->postJson('/api/pairings', ['code' => $code, 'deviceName' => 'Third'])
+        ->assertStatus(409)->assertJsonPath('error.code', 'CONTROLLER_LIMIT');
+    expect(PresentationSession::find($d['session'])->pairing_code)->toBe($code);
+});
+
+it('A28 the display can unpair one phone and keep the others', function () {
+    Event::fake([ControllerPaired::class, ControllerRevoked::class]);
+    $d = createDisplay();
+    $first = pairController($d);
+    $second = pairController(['code' => asDevice($d['token'])->postJson("/api/sessions/{$d['session']}/pairing/regenerate")->json('pairing.code'), 'account' => $d['account']]);
+
+    asDevice($first['token'])->deleteJson("/api/sessions/{$d['session']}/controllers/{$second['device']}")->assertForbidden(); // phones can't remove each other
+    asDevice($d['token'])->deleteJson("/api/sessions/{$d['session']}/controllers/{$first['device']}")->assertNoContent();
+    asDevice($d['token'])->deleteJson("/api/sessions/{$d['session']}/controllers/{$first['device']}")->assertNoContent(); // idempotent
+
+    asDevice($first['token'])->getJson("/api/sessions/{$d['session']}")->assertUnauthorized();
+    asDevice($second['token'])->getJson("/api/sessions/{$d['session']}")->assertOk();
+    Event::assertDispatched(ControllerRevoked::class, fn ($e) => $e->deviceId === $first['device'] && $e->reason === 'revoked_by_display');
+    Event::assertDispatchedTimes(ControllerRevoked::class, 1);
+
+    // "Unpair all" still removes every phone.
+    asDevice($d['token'])->deleteJson("/api/sessions/{$d['session']}/controller")->assertNoContent();
+    asDevice($second['token'])->getJson("/api/sessions/{$d['session']}")->assertUnauthorized();
 });
 
 it('regenerate invalidates the previous code', function () {

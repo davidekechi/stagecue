@@ -31,6 +31,8 @@ export interface SessionInfo {
     session: { id: string; displayName: string; status: string; accountId?: number | null };
     device: { id: string; role: 'display' | 'controller' };
     controller: { id: string; name: string; pairedAt: number | null } | null;
+    /** A28: every paired phone, oldest first. */
+    controllers?: Array<{ id: string; name: string; pairedAt: number | null; lastSeenAt: number | null }>;
     pairing: PairingInfo | null;
     realtime: RealtimeConfig;
     serverTime: number;
@@ -155,6 +157,10 @@ export class ApiClient {
     }
     revokeController(sid: string) {
         return this.request<void>('DELETE', `/sessions/${sid}/controller`);
+    }
+    /** A28: unpair one phone. */
+    revokeControllerDevice(sid: string, deviceId: string) {
+        return this.request<void>('DELETE', `/sessions/${sid}/controllers/${encodeURIComponent(deviceId)}`);
     }
     leave(sid: string) {
         return this.request<void>('DELETE', `/sessions/${sid}/controller/self`);

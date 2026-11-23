@@ -11,7 +11,12 @@ export async function pairDevice(
     input: { code: string } | { token: string },
     deviceName: string,
 ): Promise<PairResponse> {
+    const previous = await deps.devices.get().catch(() => null);
     const res = await deps.api.pair(input, deviceName, (deps.accountToken ?? accountToken)());
+    // A28: pairs no longer replace each other, so leave the old pairing ourselves (best effort).
+    if (previous && previous.deviceId !== res.device.id) {
+        await deps.api.request<void>('DELETE', `/sessions/${previous.sessionId}/controller/self`, undefined, { bearer: previous.token }).catch(() => undefined);
+    }
     await deps.devices.set({
         role: 'controller',
         deviceId: res.device.id,
@@ -36,6 +41,8 @@ export function pairingErrorMessage(code: string | undefined): string {
         case 'ACCOUNT_REQUIRED':
         case 'UNAUTHENTICATED':
             return 'Your login has expired. Log in again, then pair.';
+        case 'CONTROLLER_LIMIT':
+            return 'This display already has the most phones it can pair. Unpair one on the display first.';
         case 'RATE_LIMITED':
             return 'Too many attempts. Wait a minute, then try again.';
         case 'VALIDATION_FAILED':

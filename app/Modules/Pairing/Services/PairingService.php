@@ -73,6 +73,12 @@ class PairingService
                     throw ApiException::accountMismatch();
                 }
 
+                // A28: several phones may be paired; a new one no longer replaces the others.
+                $paired = $session->devices()->where('role', Device::ROLE_CONTROLLER)->whereNull('revoked_at')->count();
+                if ($paired >= (int) config('stagecue.max_controllers')) {
+                    throw ApiException::controllerLimit((int) config('stagecue.max_controllers'));
+                }
+                $replaced = [];
                 $session->forceFill([
                     'pairing_code' => null,
                     'pairing_token_hash' => null,
@@ -80,8 +86,6 @@ class PairingService
                     'pairing_failed_attempts' => 0,
                     'last_activity_at' => now(),
                 ])->save();
-
-                $replaced = $this->revokeControllersQuietly($session);
 
                 $device = $session->devices()->create([
                     'role' => Device::ROLE_CONTROLLER,
@@ -112,7 +116,7 @@ class PairingService
         return $result;
     }
 
-    /** Display revokes the controller, or a controller leaves. */
+    /** Display unpairs one phone (`$only`) or all of them, or a phone leaves. */
     public function revokeController(PresentationSession $session, string $reason, ?Device $only = null): void
     {
         $ids = DB::transaction(fn () => $this->revokeControllersQuietly($session, $only));

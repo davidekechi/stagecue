@@ -83,6 +83,16 @@ class PresentationSession extends Model
             ->latestOfMany();
     }
 
+    /** @return HasMany<Device, $this> A28: every paired phone, oldest first. */
+    public function activeControllers(): HasMany
+    {
+        return $this->hasMany(Device::class, 'session_id')
+            ->where('role', Device::ROLE_CONTROLLER)
+            ->whereNull('revoked_at')
+            ->orderBy('created_at')
+            ->orderBy('id');
+    }
+
     /** @return HasMany<SessionCommand, $this> */
     public function commands(): HasMany
     {

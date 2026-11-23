@@ -70,6 +70,11 @@ class ApiException extends RuntimeException
         return new self('ACCOUNT_MISMATCH', 403, 'This display is logged in to a different account. Log in with the same account on both devices.');
     }
 
+    public static function controllerLimit(int $max): self
+    {
+        return new self('CONTROLLER_LIMIT', 409, "This display already has {$max} phones paired. Unpair one on the display first.");
+    }
+
     public static function relayUnavailable(): self
     {
         return new self('RELAY_UNAVAILABLE', 503, 'The real-time relay is unavailable. Try again.', true);

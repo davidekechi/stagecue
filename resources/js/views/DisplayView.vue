@@ -153,11 +153,11 @@ onBeforeUnmount(() => {
                         :phase="store.phase"
                         :phase-detail="store.phaseDetail"
                         :pairing="store.pairing"
-                        :controller="store.controller"
+                        :controllers="store.controllers"
                         :connection="store.connection"
                         :live-link="store.socketState === 'connected'"
                         @regenerate="store.regenerateCode()"
-                        @revoke="store.revokeController()"
+                        @revoke="(id?: string) => store.revokeController(id)"
                     />
                 </template>
             </SetupPanel>

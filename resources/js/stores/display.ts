@@ -31,7 +31,9 @@ export const useDisplayStore = defineStore('display', () => {
     const phaseDetail = ref<string | null>(null);
     const sessionInfo = ref<{ sessionId: string; displayName: string } | null>(null);
     const pairing = ref<DisplayPairing | null>(null);
-    const controller = ref<DisplayController | null>(null);
+    const controllers = ref<DisplayController[]>([]);
+    /** The most recently paired phone (kept for older views). */
+    const controller = computed(() => controllers.value.at(-1) ?? null);
     const connection = ref<ConnectionStatus>({ server: 'offline', peer: 'disconnected' });
     const socketState = ref<string>('initialized');
 
@@ -46,8 +48,8 @@ export const useDisplayStore = defineStore('display', () => {
         onPairing(p) {
             pairing.value = p;
         },
-        onController(c) {
-            controller.value = c;
+        onControllers(list) {
+            controllers.value = list;
         },
         onConnection(s) {
             connection.value = s;
@@ -65,8 +67,8 @@ export const useDisplayStore = defineStore('display', () => {
         return session?.regeneratePairing() ?? Promise.resolve();
     }
 
-    function revokeController(): Promise<void> {
-        return session?.revokeController() ?? Promise.resolve();
+    function revokeController(deviceId?: string): Promise<void> {
+        return session?.revokeController(deviceId) ?? Promise.resolve();
     }
 
     const view = computed<View>(() => (_state.value ? deriveView(_state.value, _now.value) : { kind: 'standby' }));
@@ -110,6 +112,7 @@ export const useDisplayStore = defineStore('display', () => {
         sessionInfo,
         pairing,
         controller,
+        controllers,
         connection,
         socketState,
         sessionSink,

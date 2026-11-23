@@ -62,6 +62,8 @@ Errors: `404 PAIRING_INVALID` (same response for unknown and used codes, so it c
 Side effects: any previous controller is revoked (`controller.revoked` with reason `replaced`). `controller.paired` goes to the Display.
 
 ### 1.6 `DELETE /sessions/{sid}/controller` (display) · `DELETE /sessions/{sid}/controller/self` (controller)
+
+A28: `DELETE /sessions/{sid}/controller` unpairs **every** phone; `DELETE /sessions/{sid}/controllers/{deviceId}` (display) unpairs one. `GET /sessions/{sid}` also returns `controllers: [{ id, name, pairedAt, lastSeenAt }]`. Pairing past the limit → `409 CONTROLLER_LIMIT`.
 `204`. Broadcasts `controller.revoked` with reason `revoked_by_display` or `left`.
 
 ### 1.7 `POST /sessions/{sid}/commands` — relay a command (controller)
@@ -108,6 +110,7 @@ The standard Laravel/Pusher channel authorisation for `private-…` and `presenc
 | 401 | `ACCOUNT_REQUIRED` (a device token was sent where an account login is needed) | no → log in again |
 | 403 | `NOT_SESSION_MEMBER`, `FORBIDDEN_ROLE`, `ACCOUNT_MISMATCH` (the Display is logged in to another account), `REGISTRATION_CLOSED` | no |
 | 404 | `SESSION_NOT_FOUND`, `PAIRING_INVALID` | no |
+| 409 | `CONTROLLER_LIMIT` (A28) | no |
 | 410 | `SESSION_ENDED`, `PAIRING_EXPIRED` | no |
 | 422 | `VALIDATION_FAILED`, `INVALID_CREDENTIALS` | no |
 | 429 | `RATE_LIMITED` (+`Retry-After`) | yes |
